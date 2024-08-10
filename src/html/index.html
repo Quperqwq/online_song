@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" href="src/favicon.ico" type="image/x-icon">
+    {{ __html_head }}
+
+    <style>
+        footer {
+            /* width: 100%;
+            position: absolute;
+            bottom: 0; */
+
+            color: cornflowerblue;
+        }
+
+        p {
+            text-indent: 2em;
+        }
+
+        .space {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 0 1em;
+        }
+
+        .flex-list {
+            padding: 0;
+            list-style: none;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            /* background-color: #ededed;
+            border-radius: 1em; */
+        }
+
+        /* .card {
+            box-shadow: none;
+        } */
+
+        .card:hover {
+            box-shadow: 1px 1px 10px #000;
+            transform: scale(1.04);
+        }
+
+
+        #about {
+            margin-top: 256px;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .other span {
+            text-indent: 1em;
+        }
+
+        .use-project ul {
+            margin-top: 0;
+        }
+
+        .card h3 {
+            text-align: center;
+        }
+
+        .top {
+            margin: 0;
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            margin-right: -6.5em;
+        }
+
+        .top[data-show=true] {
+            margin-right: 0;
+        }
+
+        #top h2 {
+            background-color: cornflowerblue;
+            color: #fff;
+            border-radius: 14px;
+            margin: 1em;
+        }
+
+
+    </style>
+
+    <script src="src/common.js"></script>
+    <title> 欢迎 </title>
+</head>
+
+<body>
+    <!-- 难看死了 '^' -->
+
+    <section class="main">
+        <section id="top" class="space">
+            <h2 class="center"> 在线点歌 </h2>
+            <p> 当前服务已经正常运行!若想体验功能,请移步... </p>
+            <ul class="flex-list">
+                <li><a class="button" href="/order">点歌页面</a></li>
+                <li><a class="button" href="/player">播放器页面</a></li>
+                <li><a class="button" href="/dev">调试页面</a></li>
+            </ul>
+        </section>
+
+        <section id="about" class="space">
+            <article class="card author">
+                <h3> 关于作者 </h3>
+                <p> Quper是一位计算机技术爱好者，也是一位前端初学者。过去自学原生网页开发、nodejs框架使用、Python程序编写等；虽然学习内容很广泛但都不是很精通。 </p>
+                <p> 本项目就是试做一个在线点歌项目，用于提高自己代码编写水平。由于自身能力不足，项目若干处使用了AI编写。 </p>
+            </article>
+
+            <article class="card use-project">
+                <h3> 使用到的其他项目清单 </h3>
+                <p> 前端部分 </p>
+                <ul>
+                    <li> <a href="https://picnicss.com/">Picnic CSS</a> </li>
+                </ul>
+                <p> 后端部分 </p>
+                <ul>
+                    <li><a href="https://nodejs.org/"> NodeJS </a></li>
+                    <li> |- <a href="https://expressjs.com/"> express </a </li>
+                </ul>
+            </article>
+
+            <article class="card other">
+                <h3> 其他信息 </h3>
+                <span> Project Name: <strong>{{ project_name }}</strong> </span>
+                <span> Create Time: <strong>2024-07-29</strong> </span>
+            </article>
+        </section>
+
+        <footer>
+            <hr>
+            <p class="space">Author: Quper | Version: {{ver}}</p>
+        </footer>
+    </section>
+
+    <a id="go-top" href="#top" data-show="false" class="top button">▲ TOP ▲</a>
+
+    <script>
+        const eGoTop = document.getElementById('go-top')
+        window.addEventListener('scroll', () => { //监听滚动事件判断是否需要返回顶部
+            if (window.pageYOffset > 300) {
+                eGoTop.setAttribute('data-show', 'true')
+            } else {
+                eGoTop.setAttribute('data-show', 'false')
+            }
+        })
+    </script>
+</body>
+
+</html>
