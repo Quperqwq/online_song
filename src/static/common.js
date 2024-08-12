@@ -15,33 +15,36 @@ class App {
      * @param {object} data 请求体
      * @param {function(number, any)} callback 回调函数,传入状态码与响应体
      */
-    makeXhr(method = 'GET', url = '', data, callback) {
-        const xhr = this.mod.xhr
-        xhr.abort() // 关闭上一个连接
-        xhr.open(method, url)
-        xhr.setRequestHeader('Content-Type', 'application/json')
-        xhr.onerror = () => {
-            callback(xhr.status, xhr.response)
-        }
-        xhr.onload = () => {
-            callback(xhr.status, xhr.response)
-        }
+    // makeXhr(method = 'GET', url = '', data, callback) {
+    //     const xhr = this.mod.xhr
+    //     xhr.abort() // 关闭上一个连接
+    //     xhr.open(method, url)
+    //     xhr.setRequestHeader('Content-Type', 'application/json')
+    //     xhr.onerror = () => {
+    //         callback(xhr.status, xhr.response)
+    //     }
+    //     xhr.onload = () => {
+    //         callback(xhr.status, xhr.response)
+    //     }
 
-        xhr.send(JSON.stringify(data))
-    }
+    //     xhr.send(JSON.stringify(data))
+    // }
 
     /**
-     * 创建一个fetch请求
+     * 创建一个fetch请求以便使用API
      * @param {string} method 请求方法
      * @param {string} url 请求的URL
-     * @param {object} data 请求体
-     * @param {function(any | null)} callback 回调函数,传入响应体
+     * @param {object} data 请求体(对象)
+     * @param {function(object | null)} callback 回调函数,传入响应体; 如果未传入该参数将会返回响应JSON结果
+     * 
+     * @returns {undefined | object | null} 未传入回调函数将会返回对象(请求成功)或空值(请求失败)
      */
-    fetch (method = 'GET', url = '', data, callback) {
-        if (!callback | !data) {
+    makeFetch(method = 'GET', url = '', data, callback) {
+        if (!method | !url | !data | !callback) { // 未传入任意参数将报错
             console.error()
-            
+            return
         }
+        
         fetch(url, {
             method: method,
             headers: {
@@ -49,14 +52,23 @@ class App {
             },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
-        .then((data) => {
-            callback(data)
-        })
-        .catch((error) => {
-            console.error(error)
-            callback(null)
-        })
+            .then((response) => { // 处理响应内容
+                // 检查响应是否成功
+                if (response.ok) {
+                    // 尝试将响应体解析为 JSON
+                    return response.json().catch(() => ({}))
+                } else {
+                    // 如果响应不成功,返回一个空对象
+                    return {}
+                }
+            })
+            .then((data) => { // 处理完成返回结果
+                return callback(data)
+            })
+            .catch((error) => { // 处理错误
+                console.error(error)
+                return callback(null)
+            })
     }
 
     // 工具函数-路径相关
@@ -100,3 +112,9 @@ const _initPage = () => {
 
 }
 _initPage()
+
+
+
+// app.makeFetch('POST', '/api', {'stat': 'ok'}, (value) => {
+//     console.log(value)
+// })

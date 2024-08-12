@@ -12,11 +12,20 @@ const __dirname = process.cwd() // 转到ES6语法后的屑
 
 // 初始化配置
 const config = {
-    version: '', // 版本号
-    static_path: './src/static', // 静态文件路径
-    static_url: '/src', // 静态文件路由路径
-    html_path: './src/html', // html路径
-    lang_file: 'lang.json'
+    /**版本号 */
+    version: '',
+
+    /**静态文件路径 */
+    static_path: './src/static',
+    /**HTML路径 */
+    html_path: './src/html',
+    /**语言模板文件路径 */
+    lang_file: './lang.json',
+
+    /**静态文件路由路径 */
+    static_url: '/src',
+    /**默认封面地址 */
+    normal_cover_url: '/src/image/normal_cover.webp'
 }
 
 /** 控制台字体颜色预设*/
@@ -152,17 +161,20 @@ class App {
         this.text = (key, ...value) => {
             const lang_data = this.template_text[this.lang] // 读取默认语言
             /**
-             * 初始化文本
+             * 初始化文本,替换占位符
              * @param {string} text 
              * @param {Array} list 
              */
             const formatText = (text, list) => {
-                // console.log(list)
+                // app.debug(list)
                 if (!list) return text
-                list.forEach((rep_text, index) => {
-                    // text = text.replace(`$cont_${index}$`, colors.background.white + rep_text.toString() + colors.reset_background)
-                    text = text.replace(`$cont_${index}$`, this.colorFont(rep_text.toString(), '', 'white'))
-                    // console.log(index, rep_text, text)
+                list.forEach((rep_text, index) => { // 替换文本字符
+                    // app.debug(index, rep_text, text)
+                    text = text.replace(
+                        `$cont_${index}$`,
+                        // this.colorFont(rep_text ? rep_text.toString() : '', '', 'white'), // 如果需要替换值背景色 取消注释
+                        rep_text ? rep_text.toString() : '', // 如果需要替换值背景色 注释这个
+                    ) 
                 })
                 return text
             }
@@ -250,6 +262,21 @@ class App {
     isValidLang (lang_name) {
         return lang_name in this.template_text
     }
+
+    /**
+     * 字符串是否为有效URL
+     * @param {string} url 传入URL
+     */
+    isValidURL (url) {
+        // 尝试解析URL 如果解析失败那就是非URL字符串
+        try {
+            new URL(url)
+            return true
+        } catch (err) {
+            return false
+        }
+    }
+    
     
     /**
      * 判断一个值是不是非数组的对象
@@ -307,7 +334,7 @@ class App {
      * @param {string} download_path 下载路径
      * @param {function(boolean)=} callback 完成后执行回调函数并传入是否(bool)成功
      */
-    downloadFile (url, download_path, callback = undefined) {
+    downloadFile (url, download_path, callback = void 0) {
         const returns = (value, err) => { // 预设返回内容
             if (!value) app.error('try_download_file_error', download_path, err)
 
@@ -413,7 +440,7 @@ class App {
             }
             line.push(cont)
         })  // ~ 漂亮滴很呐!(赞赏)
-        return title + line.join(`\n${indent.repeat(rep_indent)}`) + '\n'
+        return colors.reset + title + line.join(`\n${indent.repeat(rep_indent)}`) + '\n'
     }
 
 
@@ -453,14 +480,17 @@ class App {
      * @param {Response} res Response值
      */
     printAccess (req, res) {
-        // app.log(`${colors.font.blue}${req.ip} ${colors.font.green}${req.method} ${colors.font.gray}${req.url} ${colors.font.yellow}HTTP/${req.httpVersion} ${colors.reset}${req.method === 'POST' ? ` | ${req.body}` : ''}`) // 打印访问日志
         const color = this.colorFont
+        let more_info = ''
+        if (req.method === 'POST') {
+            more_info = '| ' + (this.isObj(req.body) ? JSON.stringify(req.body) : req.body)
+        }
         app.log( // 打印访问日志
             color(req.ip, 'blue'),
             color(req.method, 'green'),
             color(req.url, 'gray'),
             color(`HTTP/${req.httpVersion}`, 'yellow'),
-            req.method === 'POST' ? ` | ${req.body}` : ''
+            more_info
         )
     }
     /**
@@ -525,7 +555,9 @@ class Player {
             }
 
         })
-        app.debug(`push the song: ${app.objToStr(song_data, 'song_data')}id(index): ${song_id}`)
+        // 打印新歌信息
+        // app.debug(`push the song: ${app.objToStr(song_data, 'song_data')}id(index): ${song_id}`)
+        app.info('push_song', app.objToStr(song_data, 'song_data'), song_id)
     }
 
     /**
@@ -547,7 +579,7 @@ class Player {
 const app = new App()
 const player = new Player()
 // 初始化版本信息
-app.version = '20240806'
+app.version = '202408'
 
 
 
@@ -635,11 +667,91 @@ httpApp.get('/dev', (req, res) => {
 
 
 // api...
-httpApp.post('/api', (req, res, next) => {
-    const params = req.params
+httpApp.post('/api', (req, res) => {
+    // 初始化
 
-    app.printAccess(req, res) // 打印访问日志
-    res.end()
+    let res_data = { // 初始化响应值
+        valid: true,
+        message: '',
+        data: {}
+    }
+
+    /**
+     * 传入值,若值非有效输出为默认值
+     * @param {any} value 待检测值
+     * @param {any} value 默认值
+     */
+    const valid = (value, normal = null) => {  return value ? value : normal }
+    /**
+     * 传入多个值,若值非有效返回错误并结束本次响应并响应错误
+     * @param {...any} value 
+     * 
+     * @returns {boolean} true: 所有参数均有效; false: 有任意一个参数无效且已经响应错误信息,需要return出函数
+     */
+    const isValid = (...value) => { 
+        let is_valid = true
+        value.forEach((item) => { // 遍历所有参数
+            if (!item && is_valid) { // 无效参数且没有返回错误信息的情况
+                // app.warn('invalid_request_param', app.objToStr(req_data))
+                res_data.valid = false
+                res_data.message = 'param_is_invalid'
+                endReq()
+
+                is_valid = false
+            }
+        })
+        return is_valid
+    }
+    /**
+     * 结束这个响应, 向客户端发送res_data
+     */
+    const endReq = () => {
+        res.send(res_data)
+        res.end()
+    }
+
+    const req_data = req.body // 获取请求体
+    const param_command = { // 指定对应请求的操作
+        'add_song': () => {
+            if (!isValid(req_data.src, req_data.title)) return // 检查必要参数
+            player.push({
+                'cover': valid(req_data.cover, config.normal_cover_url),
+                'singer': valid(req_data.singer),
+                'src': req_data.src,
+                'time': valid(req_data.time),
+                'title': req_data.title
+            })
+
+            endReq()
+        }
+    }
+
+    // app.log(req_data, typeof req_data)
+
+
+    
+    // 处理
+    let execute // 初始化要执行的函数
+    
+    if (typeof req_data === 'object') { // 确定是否是预期内值
+        execute = param_command[req_data.type]
+        if (!((typeof execute) === 'function')) { // 如果不存在此函数则判定为指定type无效
+            // app.debug('没有对应函数')
+            res_data.message = 'unknown_type'
+            res_data.valid = false
+            endReq()
+            return
+        }
+    } else { // 不是预期的值
+        // app.debug('不是预期值')
+        res_data.message = 'unknown_req_type'
+        res_data.valid = false
+        endReq()
+        return
+    }
+
+    execute() // 执行type对应参数的函数
+    return
 })
 
 // test
@@ -678,6 +790,7 @@ if (!app.test_mode) { // 是否是测试模式
 
     // app.downloadFile('https://music.163.com/song/media/outer/url?id=1311345944', './__temp.mp3')
 
-    app.log(app.objToStr(app.template_text, 'text'))
+    // app.log(app.objToStr(app.template_text, 'text'))
+    app.log(app.isValidURL('http://a/b/c'))
 }
 
