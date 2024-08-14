@@ -11,7 +11,10 @@
         "try_read_file_error": "尝试读取文件失败,提供的错误信息如下\n$cont_0$",
         "try_download_file_error": "尝试下载文件'$cont_0$'失败: \n$cont_1$",
         "invalid_request_param": "无效的请求参数: $cont_0$",
-        "push_song": "已添加新的歌曲到播放列表: $cont_0$id(新歌的索引): $cont_1$",
+        "push_song": "已添加新的歌曲到播放列表: $cont_0$id(新歌的索引): $cont_1$\n点歌人: $cont_2$",
+        "send_file_error": "尝试发送文件到客户端的时候出现了错误, 错误信息是\n$cont_0$",
+
+        "error_value_is_invalid": "给定的值'$cont_0$'无效" ,
 
         "test": "值1:$cont_0$,值2:$cont_1$,值3:$cont_2$,值4:$cont_3$",
         "test_mode_bypass_server": "测试模式,不启动HTTP服务器"
@@ -28,8 +31,10 @@
         "try_read_file_error": "failed to read the file, the provided error information is as follows:\n$cont_0$",
         "try_download_file_error": "try download file '$cont_0$' fail: \n$cont_1$",
         "invalid_request_param": "invalid request parameters: $cont_0$",
-        "push_song": "a new song has been added to the playlist: $cont_0$id(index): $cont_1$",
+        "push_song": "a new song has been added to the playlist: $cont_0$id(index): $cont_1$\nsong requester: $cont_2$",
+        "send_file_error": "error sending file to client\n$cont_0$",
 
+        "error_value_is_invalid": "value '$cont_0$' is invalid" ,
 
         "test": "value1:$cont_0$,value2:$cont_1$,value3:$cont_2$,value4:$cont_3$",
         "test_mode_bypass_server": "test mode, skip starting HTTP server"
