@@ -11,13 +11,13 @@
 <body>
     <h1> 这里是调试页面 </h1>
     <button onclick="
-    const src = prompt('src:')
+    const song_id = prompt('song id:')
     const title = prompt('title:')
 
     app.makeFetch('POST', '/api', {
         type: 'add_song',
-        src: src ? src : 'https://music.163.com/song/media/outer/url?id=1311345944',
-        title: title ? title : 'ずんだもんの朝食　〜目覚ましずんラップ〜'
+        src: song_id ? `https://music.163.com/song/media/outer/url?id=${song_id}` : 'https://music.163.com/song/media/outer/url?id=1311345944',
+        title: title ? title : 'normal'
     }, (value) => {console.log(value)})
     
     "> AddSong </button>

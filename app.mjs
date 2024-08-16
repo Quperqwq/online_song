@@ -2,6 +2,7 @@
 import express from 'express' // express框架
 import fs from 'fs' // 文件系统
 import path from 'path' // 路径
+
 import fetch from 'node-fetch' // fetch网络API
 import mime from 'mime' // 文件mime类型
 import crypto from 'crypto'
@@ -10,23 +11,41 @@ const httpApp = express()
 
 // 初始化常量
 const __dirname = process.cwd() // 转到ES6语法后的屑
+const __salt = '3d93bbd10a66ea6ad85bc39434c5f677' // 定义特征值用于对token生成的唯一性
 
 // 初始化配置
 const config = {
-    /**版本号 */
-    version: '',
-
+    /**设置显示语言 */
+    lang: 'zh-CN',
     /**静态文件路径 */
     static_path: './src/static',
     /**HTML路径 */
     html_path: './src/html',
     /**语言模板文件路径 */
     lang_file: './lang.json',
+    /**(User)用户信息存储路径 */
+    user_file: './user.json',
 
     /**静态文件路由路径 */
     static_url: '/src',
-    /**默认封面地址 */
-    normal_cover_url: '/src/image/normal_cover.webp'
+    /**(Player)默认封面地址 */
+    normal_cover_url: '/src/image/normal_cover.webp',
+    /**(User)默认头像 */
+    normal_avatar: '/src/image/normal.webp',
+
+    /**(Player)是否为本地模式 */
+    local_music_mode: true,
+    /**(Player)本地模式下音乐存放到文件系统的路径 */
+    local_music_path: './local_music',
+    /**(Player)音乐文件对应的HTTP服务路由位置 */
+    local_music_url: '/music',
+
+    /**(User)初始化后的admin账户 */
+    admin_user: {
+        name: 'admin',
+        password: '12345678',
+        avatar: null
+    }
 }
 
 /** 控制台字体颜色预设*/
@@ -138,13 +157,14 @@ class App {
         'number': 'yellow',
         'array': 'cyan',
         'function': 'yellow',
-        'undefined': 'gray'
+        'undefined': 'yellow',
+        '_token': 'gray'
     }
 
     constructor() {
         // 初始化设置项
         /**指定语言(默认) */
-        this.lang = 'zh-CN'
+        this.lang = config.lang
         this.version = '' // 定义版本
         /**指定服务器端口 */
         this.prot = 5000
@@ -215,20 +235,30 @@ class App {
      */
     colorFontType(value) {
         let type = typeof value
-        if (type === 'object' && !this.isObj()) type = 'array' // 确定是不是真的obj, 否则就是Array
+        if (Array.isArray(value)) type = 'array'
 
         let color_code = this.color_type[type]
         color_code = color_code ? color_code : ''
         
         let text = ''
-        if (value === null) { // null特殊处理
-            text = 'null'
-            color_code = this.color_type['null']
+        if (value === null | type === 'undefined') { // null特殊处理
+            const _type = type === 'undefined' ? 'undefined' : 'null'
+            text = _type
+            color_code = this.color_type[_type]
         } else {
             text = value.toString()
         }
+        
+        text = this.colorFont(text, color_code)
+        if (type === 'string') { // 对于string加入引号
+            const _token = this.colorFont('\'', this.color_type['_token'])
+            text = _token + text + _token
+        }
+        if (type === 'array') { // 对于Array加入中括号
+            text = this.colorFont('[', this.color_type['_token']) + text + this.colorFont(']', this.color_type['_token'])
+        }
 
-        return this.colorFont(text, color_code)
+        return text
     }
     /**向控制台打印debug日志 */
     debug(...value) {
@@ -266,6 +296,8 @@ class App {
     throwError(key = '', ...value) {
         return new Error(this.text(key, ...value))
     }
+    /** 在控制台打印对象*/
+    logObj(obj) {this.log(this.objToStr(obj))}
 
     // 工具函数相关...
     /**
@@ -303,11 +335,17 @@ class App {
 
     /**
      * 获取字符串格式的时间以便阅读
-     * @param {boolean} is_time 是否获取时间戳,如果否则将获得字符串格式的时间
      * @returns {string}
      */
-    date(is_time = false) {
-        return is_time ? this.modDate.getTime().toString() : this.modDate.toLocaleString()
+    date() {
+        return this.modDate.toLocaleString()
+    }
+
+    /**
+     * 获取时间戳
+     */
+    getTime() {
+        return this.modDate.getTime()
     }
 
     /**
@@ -334,13 +372,50 @@ class App {
      */
     readJson(file_name, callback = void 0) {
         let returns
-        this.readFile(file_name, (cont) => {
-            const obj = JSON.parse(cont)
-
-            returns = callback ? callback(obj) : obj
-        })
+        try {
+            this.readFile(file_name, (cont) => {
+                const obj = JSON.parse(cont)
+    
+                returns = callback ? callback(obj) : obj
+            })
+        } catch (err) {
+            return callback ? callback(undefined) : undefined
+        }
 
         return returns
+    }
+
+    /**
+     * 写入文件(内置模块功能封装)
+     * @param {string} file_name 传入文件名
+     * @param {string} data 需要写入的内容
+     * @param {function | undefined} callback 回调函数
+     * @returns {boolean} 是否写入成功
+     */
+    writeFile(file_name, data, callback = void 0) {
+        let valid = true
+        try {
+            fs.writeFileSync(file_name, data, 'utf-8')
+        } catch (err) {
+            this.error('try_write_file_error', err)
+            valid = false
+        }
+        return callback ? callback(valid) : valid
+    }
+
+    /**
+     * 写入对象到Json文件
+     * @param {string} file_name 传入文件名
+     * @param {object} data 需要写入的对象
+     * @param {function | undefined} callback 回调函数
+     * @returns {boolean} 是否成功
+     */
+    writeJson(file_name, data, callback = void 0) {
+        if (!(path.extname(file_name).toLowerCase() === '.json')) { // 若文件名非json则判定为无效
+            return false
+        }
+        const returns = this.writeFile(file_name, JSON.stringify(data))
+        return callback ? callback(returns) : returns
     }
 
     /**
@@ -361,7 +436,6 @@ class App {
      *  app.log(hash_value) // 文件下载成功, 打印出文件的哈希值
      * })
      */
-
     downloadFile({ url, download_path, ext_name }, callback) {
         /**
          * 获取预设返回内容
@@ -370,7 +444,10 @@ class App {
          */
         const returns = (value, err = '', index = void 0) => {
             // app.debug('returns index:', index)
-            if (err) app.error('try_download_file_error', url, err)
+            if (err) {
+                app.error('try_download_file_error', url, err)
+                app.debug('url:', url, ',download_path:', download_path, ',ext_name:', ext_name)
+            }
 
             // return typeof callback === 'function' ? callback(value) : value
             return callback(value)
@@ -420,6 +497,11 @@ class App {
                     file_hash = hash.digest('hex') // 获取哈希值
                     if (is_hash_name) save_name = path.join(save_name, file_hash + '.' + ext_name) // 需要获取散列值 更改save_name为 path/hash.ext_name
 
+                    if (this.getFileStat(save_name).isFile() && is_hash_name) { // 如果文件已经存在且是哈希文件名则不需要再保存
+                        app.debug(`download file '${save_name}' is exist, hash is '${file_hash}'`)
+                        return returns(file_hash)
+                    }
+
                     // 开始写入文件到文件系统
                     const write = fs.createWriteStream(save_name) // 创建一个写入流 用于写入文件
                     write.write(data, (err) => { // 写入文件
@@ -448,8 +530,13 @@ class App {
         try {
             file_stat = fs.statSync(file_name)
         } catch (err) {
-            this.isInit ? app.error('try_read_file_error', err) : console.error(err) // 打印错误信息
+            file_stat = undefined
         }
+        // try {
+        //     file_stat = fs.statSync(file_name)
+        // } catch (err) {
+        //     this.isInit ? app.error('try_read_file_error', err) : console.error(err) // 打印错误信息
+        // }
         if (!file_stat) {
             file_stat = {}
             file_stat.isDirectory = () => {return false}
@@ -466,6 +553,15 @@ class App {
     getFilePath(rel_path) {
         const abs_path = path.join(config.static_path, rel_path) // 获取绝对路径
         return (!(this.getFileStat(abs_path).isFile())) ? abs_path : void 0
+    }
+
+    /**
+     * 获取一个字符串的哈希
+     * @param {string} str 传入需要获取哈希的字符串
+     * @param {'sha256' | 'sha512' | 'md5' | 'sha1'} type 获取的类型
+     */
+    getStrHash(str, type = 'sha256') {
+        return crypto.createHash(type).update(str).digest('hex')
     }
 
     /**
@@ -491,12 +587,13 @@ class App {
      * @param {string} [indent='    |-'] 缩进内容
      * @param {number} [rep_indent=1] 缩进内容重复次数
      */
-    objToStr(obj, title = undefined, rep_indent = 1, indent = '    |-') {
+    objToStr(obj, title = undefined, rep_indent = 1, indent = ' |-') {
+        // (!) 对象中对象出现意外换行现象
         if (!(typeof obj === 'object')) {
-            app.error('consol_invalid_param', obj)
+            app.warn('consol_invalid_param', obj)
         }
         title = title ? '\n' + title : ''
-        let line = [''] // 初始化line数组用于存储每一行内容 (PS:留下一个空字符串是必要的)
+        let line = [''] // 初始化line数组用于存储每一行内容 (PS:留下一个空字符串用于首行换行)
         Object.keys(obj).forEach((key) => { // 遍历整个对象
             let value = obj[key]
 
@@ -505,7 +602,7 @@ class App {
                 // app.debug('is obj:', value)
                 cont += this.objToStr(value, '', rep_indent + 1, indent) // 将对象再转换
             } else { // not对象
-                if (!(value === null)) {
+                if (!(value === null || value === undefined)) {
                     value = value.replace ? value.replace('\n', '\\n') : value // 转义转义换行, 如果不是字符串返回原值
                 }
                 // app.debug(value, typeof value)
@@ -513,7 +610,7 @@ class App {
             }
             line.push(cont)
         })  // ~ 漂亮滴很呐!(赞赏)
-        return colors.reset + title + line.join(`\n${indent.repeat(rep_indent)}`) + '\n'
+        return colors.reset + title + line.join(`\n${indent.repeat(rep_indent)}`)
     }
 
 
@@ -579,26 +676,25 @@ class Player {
     /**
      * 构建一个播放器
      * @param {boolean} local_mode 是否启用本地模式(本地模式将缓存歌曲URL)
-     * @param {string} [static_path='./local_music'] 缓存音乐存放路径
-     * @param {string} [static_url='/music'] 指定访问音乐文件在服务器的路由根路径
+     * @param {string} static_path 缓存音乐存放路径
+     * @param {string} static_url 指定访问音乐文件在服务器的路由根路径
+     * 
+     * 
+     * @typedef {Object} SongData
+     * @property {string} title - 歌曲标题
+     * @property {string} src - 歌曲源
+     * @property {string} singer - 歌曲歌手
+     * @property {string} cover - 歌曲封面源
+     * @property {number} time - 歌曲总时长(秒)
+     * @property {number} lyric - 歌曲歌词内容
      */
-    constructor(local_mode = true, static_path = './local_music', static_url = '/music') {
+    constructor(
+        local_mode = config.local_music_mode,
+        static_path = config.local_music_path,
+        static_url = config.local_music_url
+    ) {
         /**播放列表 */
-        this.list = [
-            {
-                data: {
-                    'title': 'song name',
-                    'singer': 'singer name',
-                    'src': 'http://example.com/song.mp3',
-                    'cover': 'http://example.com/song.webp',
-                    'time': 0
-                },
-                info: {
-                    'id': '1',
-                    'name': ''
-                }
-            }
-        ]
+        Player.list = []
 
 
         if (!app.getFileStat(static_path).isDirectory()) throw app.throwError('error_value_is_invalid', static_path) // static_path必须为路径
@@ -614,33 +710,33 @@ class Player {
 
     /**
      * 向播放列表添加歌曲
-     * @param {object} song_data 传入歌曲信息
-     * @param {string} song_data.title - 歌曲标题
-     * @param {string} song_data.src - 歌曲源
-     * @param {string} song_data.singer - 歌曲歌手
-     * @param {string} song_data.cover - 歌曲封面源
-     * @param {number} song_data.time - 歌曲总时长(秒)
+     * 
+     * @param {SongData} song_data 传入歌曲信息
      * 
      * @param {function(boolean)=} callback 当为local_mode的时候会调用callback返回是否成功
      * @param {string} order_name 传入点歌者信息
+     * @returns {boolean | undefined}
      */
     push(song_data, order_name, callback) {
         const push = () => { // 临时定义函数用于兼容异步函数
-            const song_id = this.list.length
+            const valid = (value, normal = null) => {return value ? value : normal}
+            const song_id = Player.list.length
             const push_data = {
                 data: {
-                    'cover': song_data.cover,
-                    'singer': song_data.singer,
+                    'cover': valid(song_data.cover),
+                    'singer': valid(song_data.singer),
                     'src': song_src,
                     'time': song_data.time,
-                    'title': song_data.title
+                    'title': song_data.title,
+                    'lyric': song_data.lyric
                 },
                 info: {
                     'id': song_id,
-                    'name': order_name
+                    'name': order_name,
+                    'time': app.getTime()
                 }
             }
-            this.list.push(push_data) // 将播放歌曲的信息push到this.list对象中
+            Player.list.push(push_data) // 将播放歌曲的信息push到Player.list对象中
             // 打印新歌信息
             app.info('push_song', app.objToStr(push_data.data, `song_data[${song_id}]`), song_id, push_data.info.name)
         }
@@ -675,7 +771,7 @@ class Player {
      * @param {string} src 歌曲源链接
      */
     isExits(src) {
-        this.list.forEach((item) => { // 遍历播放列表,如果存在该源直接返回true
+        Player.list.forEach((item) => { // 遍历播放列表,如果存在该源直接返回true
             if (item.data.src === src) return true
         })
         return false
@@ -699,19 +795,366 @@ class Player {
      */
     getMusicPath(file_name) {
         const music_path = path.join(__dirname, this.static_path, file_name)
+        // app.log(music_path)
         if (!app.getFileStat(music_path).isFile()) return ''
         return music_path
     }
 }
 
 
+class User extends Player {
+    /**
+     * @typedef {Object} UserData User类内存储用户信息的标准格式
+     * @property {UserProfile} profile
+     * @property {UserVerify} verify
+     * @property {UserRole} role
+     * @property {UserInfo} UserInfo
+     * 
+     * @typedef {Object} UserProfile 用户信息
+     * @property {string} name 昵称
+     * @property {string | undefined} password 密码
+     * @property {string | null} email 邮箱
+     * @property {string | null} avatar 头像地址
+     * @property {number} id UID
+     * 
+     * @typedef {Object} UserVerify 用户验证信息相关
+     * @property {string} token 用户身份验证信息
+     * 
+     * @typedef {Object} UserRole 用户权限
+     * @property {boolean} playing 
+     * @property {boolean} order 
+     * @property {boolean} admin 
+     * 
+     * @typedef {Object} UserInfo 关于用户
+     * @property {number} ctime 创建时间
+     * @property {number} mtime 修改时间时间
+     */
+    /**
+     * 创建一个User类
+     * @param {string} user_name 用户名
+     * 
+     * @param {object} param2 用户信息
+     * @param {boolean} param2.is_temp 是否是临时用户 (临时用户不需要密码或cookie登入)
+     * @param {number | undefined} param2.id 用户ID
+     * @param {string | undefined} param2.password 用户密码
+     * @param {string | undefined} param2.avatar 用户头像
+     * @param {string | undefined} param2.email 用户邮箱
+     * @param {string | undefined} param2.cookie_login cookie登入值
+     * 
+     */
+    constructor(user_name, {is_temp = false, id, password, avatar, email, cookie_login}) {
+        super() // 构造继承的Player
+        
+        /**存储用户数据内容文件 */
+        this.user_file = config.user_file
+        /**默认头像 */
+        this.normal_avatar = config.normal_avatar
+
+        /**
+         * 用户基本信息
+         * @type {UserProfile}
+         */
+        this.profile = {
+            name: user_name,
+            avatar: avatar,
+            email: email,
+            id: id,
+            password: password
+        }
+
+        /**cookie登入内容 */
+        this.cookie_login = cookie_login
+
+        /**是否是临时用户 */
+        this.is_temp = is_temp
+        /**是否已登入; 判断是否有效登入: 确保`config.user_file`的用户信息比对一致且算是有效登入*/
+        this.is_login = false
+
+        if (!app.getFileStat(this.user_file).isFile()) { // 如果用户信息文件不存在 初始化文件
+            this._initData()
+            app.info('create_file', this.user_file)
+        }
+    }
+
+    /**(文件或缓存)获取所有用户数据*/
+    get all_data() {
+        if (!User.cache_data) {
+            User.cache_data = app.readJson(this.user_file)
+            if (!User.cache_data) {
+                throw app.throwError('error_read_file_invalid', this.user_file)
+            }
+        }
+        return User.cache_data
+    }
+
+    /**
+     * (all_data)获取所有用户信息
+     */
+    get all_user() {
+        return this.all_data.users
+    }
+
+    /**(all_data)获取data的info */
+    get data_info() {
+        return this.all_data.info
+    }
+
+    /**
+     * (all_user)获取用户数据
+     * @returns {UserData} 
+     */
+    get user_data() {
+        if (!this.is_login) return {}
+        return this.all_user[this.profile.id]
+    }
+
+    /**初始化内容 */
+    _initData() {
+        const time = app.getTime()
+        const data = {
+            'users': {},
+            'info': {
+                'ver': app.version,
+                'ctime': time,
+                'mtime': time,
+                'last_uid': 10000
+            }
+        }
+        if (!this.update(data)) throw app.throwError('error_init_user_file', this.user_file)
+
+        const reg_valid = this.add(config.admin_user, true)
+        if (reg_valid) app.warn('error_reg_user', config.admin_user.name, reg_valid)
+    }
+
+    /**
+     * (Array.forEach)遍历每个用户
+     * @param {function(UserData)=} callback 
+     */
+    forEachUser(callback) {
+        return Object.keys(this.all_user).forEach((uid) => {
+            const user_data = this.all_data['users'][uid]
+            callback(user_data)
+        })
+    }
+
+    /**
+     * (文件)更新所有用户用户数据
+     * @param {object} value 
+     */
+    update(value = User.cache_data) {
+        if (!app.writeJson(this.user_file, value)) {
+            return false
+        }
+        User.cache_data = value
+        return true
+    }
+
+    /**
+     * 用户信息是否重复
+     * @param {object} param0 
+     * @param {object} param0.name 用户名称
+     * @param {object} param0.id 用户ID
+     * @returns {'name_is_exist' | 'uid_is_exist' | ''} 返回哪个值存在于用户列表中
+     */
+    isExits({name, id} = this.profile) {
+        let text = ''
+        this.forEachUser((user_data) => {
+            if (user_data.profile.name === name) text = 'name_is_exist'
+            if (user_data.profile.id === id) text = 'uid_is_exist'
+        })
+        return text
+    }
+
+    /**
+     * 检查一个值是否有效
+     * @param {'password' | 'name'} type 判断类型
+     * @param {string} value 判断值
+     */
+    isValid(type, value) {
+        const reg = {
+            /**特殊字符 */
+            special: /[\\\/\*\+\?\.\^\$\|\(\)\[\]\{\}]/,
+            /**密码 */
+            password: /^[a-zA-Z0-9_]+$/,
+        }
+        if (!(typeof value === 'string')) return 'param_invalid'
+        switch (type) {
+            case 'name':
+                if (value.length < 4) return 'name_too_short'
+                if (value.length > 12) return 'name_too_long'
+                if (reg.special.test(value)) return 'name_have_special_char'
+                break
+            case 'password':
+                if (value.length < 6) return 'password_too_short'
+                if (value.length > 16) return 'password_too_long'
+                if (!reg.password.test(value)) return 'password_have_special_char'
+                break
+            default:
+                return 'type_not_found'
+        }
+        return ''
+    }
+    
+    /**
+     * 获取用户的Token用于验证或初始化用户身份验证信息
+     * @param {string} name 用户名
+     * @param {string} uid 用户UID
+     * @param {string} password 密码
+     */
+    getToken(name = this.profile.name, uid = this.profile.id, password = this.profile.password) {
+        const plain_token = `${uid}-${name}-${password}/${__salt}` // 这里的token经过hash计算后得到一个唯一token, token的特征值需要独一无二
+        // app.log(plain_token)
+        return app.getStrHash(plain_token)
+    }
+
+    /**
+     * 尝试登入一个用户实例
+     * @param {{name: string, password: string}} [param0=this.profile] 传入用户信息
+     */
+    login({name, password} = this.profile) {
+        if (this.is_login) return 'is_login'
+        if (!(name || password)) return 'lost_param'
+
+        // 检查名称是否存在
+        let valid_name = false
+        let uid = -1
+        let token = ''
+        /**@type {UserData} */
+        let user_data
+        this.forEachUser((item) => {
+            // app.log(item.profile.name, name)
+            if (item.profile.name === name) {
+                valid_name = true
+                uid = item.profile.id
+                token = item.verify.token
+                user_data = item
+            }
+        })
+        // app.log(user_data)
+        if (!valid_name) return 'name_not_found'
+
+        // 校验token
+        const get_token = this.getToken(name, uid, password)
+        if (!(get_token === token)) return 'name_or_password_error'
+
+        // 校验成功
+        app.info('user_login', 'login')
+        app.debug(app.objToStr(user_data, 'user_data'))
+        this.is_login = true
+        this.profile = user_data.profile
+        return ''
+    }
+
+    /**
+     * 尝试注册一个用户实例
+     * @param {{name: string, avatar: string, email: string, password: string}} profile 传入用户信息
+     */
+    add({name, avatar, email, password} = this.profile, _init = false) {
+        // 检测参数是否有效
+        /**@type {boolean} 参数是否有效 */
+        let param_valid = true
+
+        const params = [name, password]
+        params.forEach((value) => {
+            if (!((typeof value === 'string') && value)) param_valid = false
+        })
+        if (!param_valid) return 'lost_param'
+
+        this.data_info.last_uid += 1
+        const uid = this.data_info.last_uid
+        // 验证 名称|密码 是否有效
+        const name_valid = this.isValid('name', name)
+        if (name_valid) return name_valid
+        const pwd_valid = this.isValid('password', password)
+        if (pwd_valid) return pwd_valid
+        // 验证 名称|UID 是否有重复
+        const is_exist = this.isExits({name: name, id: uid})
+        if (is_exist) return is_exist
+
+        const token = this.getToken(name, uid, password)
+        const time = app.getTime()
+
+        // 更新用户列表信息
+        const user_role = {// 指定为init的账户给予管理员权限
+            'playing': _init ? true : false,
+            'order': true,
+            'admin': _init ? true : false
+        }
+        let user_avatar = avatar ? avatar : this.normal_avatar
+        const user_data = {
+            'profile': {
+                'name': name,
+                'email': email ? email : null,
+                'avatar': user_avatar,
+                'id': uid
+            },
+            'verify': {
+                'token': token
+            },
+            'role': user_role,
+            'info': {
+                ctime: time,
+                mtime: time
+            }
+        }
+        this.all_user[uid] = user_data
+        this.data_info.mtime = time
+        this.update()
+
+        app.info('user_register', user_data.profile.name)
+
+        // 更新实例信息
+        if (_init) return ''
+        if (this.login({ name: name, password: password })) return 'unexpected'
+        return ''
+    }
+
+    /**
+     * (Player)点一首歌到播放列表
+     * @param {SongData} song_data 
+     * @param {function(boolean)=} callback 
+     * @returns {string}
+     */
+    order(song_data, callback) {
+        const is_exist = typeof callback === 'function' 
+        const returns = (value) => {
+            if (value === '_func') {
+                return is_exist ? callback : undefined
+            } else {
+                return is_exist ? callback(value) : value
+            }
+        }
+
+        
+        if (!(this.is_login || this.is_temp)) return returns('not_login')
+        if (!this.user_data.role.order) return returns('not_role')
+        if (!this.push(song_data, this.profile.name, returns('_func'))) return returns('')
+    }
+} 
+
+
+
+// 初始化config信息
+Object.keys(config)
+const _init_config = () => {
+    /**
+     * 格式化URL字符串
+     * @param {string} url 
+     * @returns 
+     */
+    const formatURL = (url) => {
+        return url.replace(/^\/+|\/+$/g, '')
+    }
+    config.local_music_url = formatURL(config.local_music_url)
+    config.static_url = formatURL(config.static_url)
+}
+_init_config()
 
 // 初始化对象
 const app = new App()
 const player = new Player()
 // 初始化版本信息
-app.version = '202408'
-
+app.version = 'dev-202408_16'
 
 
 
@@ -753,9 +1196,11 @@ app.debug(app.objToStr(config, app.colorFont('SETTING', 'gray'))) // 配置信�
 
 httpApp.use(express.json()) // 配置json解析中间件
 
-// 打印访问日志
+// 打印访问日志并验证身份
 httpApp.use((req, res, next) => {
     app.printAccess(req, res)
+
+
     next()
 })
 
@@ -796,13 +1241,12 @@ httpApp.get('/dev', (req, res) => {
 })
 
 // 本地音乐
-httpApp.get('/music/*', (req, res) => {
+httpApp.get(`/${config.local_music_url}/*`, (req, res) => {
     const file_name = req.params[0]
 
     const music_path = player.getMusicPath(file_name)
     if (!music_path) {
-        res.status(404).send('file_not_found')
-        res.end()
+        res.status(404).send('file_not_found').end()
         return
     }
     res.set('Content-Type', 'audio/mpeg')
@@ -833,7 +1277,7 @@ httpApp.post('/api', (req, res) => {
      * @param {any} value 待检测值
      * @param {any} value 默认值
      */
-    const valid = (value, normal = null) => { return value ? value : normal }
+    const valid = (value, normal = '') => { return value ? value : normal }
     /**
      * 传入多个值,若值非有效返回错误并结束本次响应并响应错误
      * @param {...any} value 
@@ -864,14 +1308,16 @@ httpApp.post('/api', (req, res) => {
     const req_data = req.body // 获取请求体
     const param_command = { // 指定对应请求的操作
         'add_song': () => {
+            // (IMP) 注意,这里的player.push方法后期要兼容用户系统改为user.order, 其valid方法需要移至player.push内以便在其他地方也能得到有效参数
             if (!isValid(req_data.src, req_data.title)) return // 检查必要参数
             player.push({
                 'cover': valid(req_data.cover, config.normal_cover_url),
                 'singer': valid(req_data.singer),
                 'src': req_data.src,
                 'time': valid(req_data.time),
-                'title': req_data.title
-            }, valid(req_data.order), (valid) => { // (ADD)这里后续需要添加身份认证获得的req_data.order, 即点歌人名称
+                'title': req_data.title,
+                'lyric': valid(req_data.lyric)
+            }, valid(req_data.order), (valid) => {
                 if (valid) { // 是否有效
                     endReq()
                 } else {
@@ -881,6 +1327,9 @@ httpApp.post('/api', (req, res) => {
                 }
             })
 
+        },
+        'login': () => {
+            
         }
     }
 
@@ -919,7 +1368,7 @@ httpApp.post('/test', (req, res) => {
     res.end()
 })
 
-httpApp.use(config.static_url, express.static(config.static_path)) // 设置静态目录
+httpApp.use(`/${config.static_url}`, express.static(config.static_path)) // 设置静态目录
 
 
 /**路由不存在 */
@@ -957,9 +1406,15 @@ if (!app.test_mode) { // 是否是测试模式
     // app.downloadFile({'url': 'https://music.163.com/song/media/outer/url?id=1311345944', 'ext_name': 'mp3', 'download_path': './'}, (hash) => {
     //     app.log(hash)
     // })
-    // app.downloadFile({ 'url': 'https://music.163.com/song/media/outer/url?id=1311345944', 'download_path': '__.mp3' }, (hash) => {
-    //     app.log(hash)
-    // })
+
+    const user = new User('Quper', {'password': 'Quper233'})
+    // app.log(user.add())
+    app.log('login' + user.login())
+    app.log(user.order({
+        'src': 'https://music.163.com/song/media/outer/url?id=1501952920',
+        'title': 'Swift'
+    }, (valid) => {app.log(valid)}
+    ))
 
 }
 
