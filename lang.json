@@ -15,7 +15,10 @@
         "user_register": "已成功注册一个用户'$cont_0$'",
 
         "create_file": "已新建文件'$cont_0$'",
+        
 
+        "missing_param": "$cont_0$:缺少参数'$cont_1$'",
+        "not_init_use_method": "$cont_0$:在没有初始化的情况下就使用了动态方法",
 
         "try_read_file_error": "尝试读取文件失败,提供的错误信息如下\n$cont_0$",
         "try_write_file_error": "尝试写入文件失败,提供的信息如下\n$cont_0$",
@@ -24,6 +27,8 @@
         "invalid_request_param": "无效的请求参数: $cont_0$",
         "push_song": "已添加新的歌曲到播放列表: $cont_0$\nid(新歌的索引): $cont_1$\n点歌人: $cont_2$",
         "send_file_error": "尝试发送文件到客户端的时候出现了错误, 错误信息是\n$cont_0$",
+
+        "file_not_found": "文件'$cont_0$'不存在",
 
         "error_value_is_invalid": "给定的值'$cont_0$'无效" ,
         "error_init_user_file": "尝试初始化用户信息文件'$cont_0$'失败",
@@ -51,6 +56,10 @@
 
         "create_file": "create file '$cont_0$'",
 
+
+        "missing_param": "$cont_0$:missing parameters'$cont_1$'",
+        "not_init_use_method": "$cont_0$: dynamic method used without initialization.",
+
         "try_read_file_error": "failed to read the file, the provided error information is as follows\n$cont_0$",
         "try_write_file_error": "failed to write the file, the provided error information is as follows\n$cont_0$",
         "try_download_file_error": "try download file '$cont_0$' failed: \n$cont_1$",
@@ -58,6 +67,8 @@
         "invalid_request_param": "invalid request parameters: $cont_0$",
         "push_song": "a new song has been added to the playlist: $cont_0$\nid(index): $cont_1$\nsong requester: $cont_2$",
         "send_file_error": "error sending file to client\n$cont_0$",
+
+        "file_not_found": "file '$cont_0$' not found",
 
         "error_value_is_invalid": "value '$cont_0$' is invalid" ,
         "error_init_user_file": "try init user file '$cont_0$' failed",
