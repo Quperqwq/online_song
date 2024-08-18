@@ -1,14 +1,59 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{ __html_head }}
     <title> Login </title>
-</head>
-<body>
-    
+    <style>
+        .input {
+            width: 70%;
+            margin: 0 auto;
+            margin-top: 2em;
+        }
 
+        .input :not(:first-child) {
+            margin-top: .7em;
+        }
+    </style>
+</head>
+
+<body>
+
+    <section class="tabs two space">
+        <input id="tab-1" type="radio" name="card" checked >
+        <label class="pseudo button toggle" for="tab-1">登入</label>
+        <input id="tab-2" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-2">注册</label>
+        <section class="row">
+          <div class="login">
+            <section class="input">
+                <input type="text" title="name" name="name" placeholder="用户名/ID">
+                <input type="password" title="password" name="password" placeholder="密码">
+            </section>
+            <section>
+                <a href="">忘记密码?</a>
+                <button type="submit">登入</button>
+            </section>
+
+          </div>
+      
+          <div class="register">
+            
+          </div>
+        </section>
+      </section>
+
+
+    <!-- 消息框 -->
+
+    <!-- data-style: confirm | message -->
+    <!-- <label for="msg-enter" class="button"> show </label> -->
+    <section class="modal" data-style="confirm" id="msg-box"> </section>
+
+    <script src="/src/page-login.js"></script>
     <!-- 这里需要处理来自 app.mjs/(TAG)用户验证失败/ 的URL查询参数type和from -->
 </body>
+
 </html>

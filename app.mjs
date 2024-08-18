@@ -19,9 +19,9 @@ const config = {
     lang: 'zh-CN',
     /**静态文件路径 */
     static_path: './src/static',
-    /**HTML路径 */
+    /**(APP)HTML路径 */
     html_path: './src/html',
-    /**语言模板文件路径 */
+    /**(APP)语言模板文件路径 */
     lang_file: './lang.json',
     /**(User)用户信息存储路径 */
     user_file: './user.json',
@@ -42,6 +42,9 @@ const config = {
     /**(Player)音乐文件对应的HTTP服务路由位置 */
     local_music_url: '/music',
 
+    /**(APP)设置HTML模板文件头部内容 */
+    html_head_cont: `<link rel="stylesheet" href="/src/picnic.css" data-tip="picnic css库">\n<script src="/src/common.js"></script>\n<link rel="stylesheet" href="/src/common.css">`,
+
     /**(User)初始化后的admin账户 */
     admin_user: {
         name: 'admin',
@@ -49,8 +52,31 @@ const config = {
         avatar: null
     },
 
-    /**非登入用户可访问的路由 */
-    guest_routes: ['/login', '/', '/dev', '/src'],
+    /**(User)访客账户 @type {UserData} */
+    guest_user: {
+        'profile': {
+            'avatar': null,
+            'email': null,
+            'id': -1,
+            'name': 'Guest',
+            'password': null
+        },
+        'info': {
+            'ctime': -1,
+            'mtime': -1
+        },
+        'role': {
+            'admin': false,
+            'order': false,
+            'playing': false
+        },
+        'verify': {
+            'token': ''
+        }
+    },
+
+    /**非登入用户可访问的路由(可使用通配符) */
+    guest_routes: ['/login', '/', '/dev', '/src/*', '/api'],
 }
 
 /** 控制台字体颜色预设*/
@@ -124,7 +150,7 @@ class App {
     /**项目名称 */
     name = 'online song'
     /**默认继承到HTML模板内头部的内容('__html_head'值) */
-    html_head_cont = `<link rel="stylesheet" href="src/picnic.css" data-tip="picnic css库">`
+    html_head_cont = config.html_head_cont
     /**参数对应的命令 */
     param_command = {
         start: () => { this.debug_mode = false },
@@ -244,7 +270,7 @@ class App {
 
         let color_code = this.color_type[type]
         color_code = color_code ? color_code : ''
-        
+
         let text = ''
         if (value === null | type === 'undefined') { // null特殊处理
             const _type = type === 'undefined' ? 'undefined' : 'null'
@@ -253,7 +279,7 @@ class App {
         } else {
             text = value.toString()
         }
-        
+
         text = this.colorFont(text, color_code)
         if (type === 'string') { // 对于string加入引号
             const _token = this.colorFont('\'', this.color_type['_token'])
@@ -302,7 +328,7 @@ class App {
         return new Error(this.text(key, ...value))
     }
     /** 在控制台打印对象*/
-    logObj(obj) {this.log(this.objToStr(obj))}
+    logObj(obj) { this.log(this.objToStr(obj)) }
 
     // 工具函数相关...
     /**
@@ -334,6 +360,7 @@ class App {
      * @param {boolean} _array 是否需要返回数组
      */
     formatPath(path, _array = false) {
+        if (!path) return _array ? [] : ''
         let dir_list = path.split(/[//|\\]/g)
         /**@type {string[]} */
         let path_list = []
@@ -383,6 +410,17 @@ class App {
             encode_str += _str
         })
         return encode_str
+    }
+
+    /**
+     * 使用通配符匹配
+     * (i)该代码使用了生成式AI
+     * @param {string} pattern 包含通配符的字符串
+     * @param {string} path 需要匹配的字符串
+     */
+    matchPath(pattern, path) {
+        const regex = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$')
+        return regex.test(path)
     }
 
 
@@ -437,7 +475,7 @@ class App {
         try {
             this.readFile(file_name, (cont) => {
                 const obj = JSON.parse(cont)
-    
+
                 returns = callback ? callback(obj) : obj
             })
         } catch (err) {
@@ -546,7 +584,7 @@ class App {
                 let save_name = download_path // 初始化保存为的名称
                 let file_hash = '' // 初始化文件哈希值
                 let data_buffer = [] // 设置内容缓冲区
-                
+
 
                 response.body.on('data', (chunk) => { // 将内容暂存到缓冲区
                     data_buffer.push(chunk)
@@ -601,8 +639,8 @@ class App {
         // }
         if (!file_stat) {
             file_stat = {}
-            file_stat.isDirectory = () => {return false}
-            file_stat.isFile = () => {return false}
+            file_stat.isDirectory = () => { return false }
+            file_stat.isFile = () => { return false }
         }
         return callback ? callback(file_stat) : file_stat
     }
@@ -625,7 +663,7 @@ class App {
     getStrHash(str, type = 'sha256') {
         return crypto.createHash(type).update(str).digest('hex')
     }
-    
+
     /**
      * 获取一个16进制的随机数
      * @param {number} length 长度
@@ -637,7 +675,7 @@ class App {
     }
 
     /**
-     * 基础渲染模板引擎
+     * (regex)基础渲染模板引擎
      * @param {string} template 模板内容
      * @param {object} data 模板数据
      * 
@@ -645,21 +683,38 @@ class App {
      * app.renderTemplate('hello, my name is {{ name }}.', {name: 'Quper'}) // hello, my name is Quper.
      */
     renderTemplate(template, data) {
-        const regex = /\{\{\s*(\w+)\s*\}\}/g // 定义正则
-        return template.replace(regex, (match, key) => {
+        return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => {
             // 从 data 对象中获取对应的值并返回
-            return data[key] !== 'undefined' ? data[key] : ''
+            return data[key] === undefined ? '' : data[key]
         })
+    }
+
+    /**
+     * (regex)根据格式渲染彩色字体
+     * @param {string} str 指定字体
+     * 
+     * @example
+     * // ...
+     * app.renderColorText('[[red]]test') // test
+     */
+    renderColorText(str) {
+        const font_color = colors.font
+        const text = str.replace(/\[\[\s*(\w+)\s*\]\]/g, (_, key) => {
+            return font_color[key] === undefined ? '' : font_color[key]
+        })
+        return text + colors.reset
     }
 
     /**
      * 将对象转换为可读性强字符串样式
      * @param {Object} obj 传入对象
-     * @param {string} title 显示样式上根的标题
-     * @param {string} [indent='    |-'] 缩进内容
-     * @param {number} [rep_indent=1] 缩进内容重复次数
+     * @param {object} [param1]
+     * @param {string} [param1.title] 显示样式上根的标题
+     * @param {string} [param1.indent='    |-'] 缩进内容
+     * @param {number} [param1.rep_indent=1] 缩进内容重复次数
+     * @param {boolean} [param1.no_color=false] 是否不启用控制台颜色
      */
-    objToStr(obj, title = undefined, rep_indent = 1, indent = ' |-') {
+    objToStr(obj, { title = undefined, rep_indent = 1, indent = ' |-', no_color = false }) {
         if (!(typeof obj === 'object')) {
             app.warn('consol_invalid_param', obj)
         }
@@ -671,17 +726,19 @@ class App {
             let cont = `${key}: ` // 初始化该行内容
             if (this.isObj(value)) { // 判断是否对象, 形似分支的操作
                 // app.debug('is obj:', value)
-                cont += this.objToStr(value, '', rep_indent + 1, indent) // 将对象再转换
+                cont += this.objToStr(value, { rep_indent: rep_indent + 1, indent: indent, no_color: no_color }) // 将对象再转换
             } else { // not对象
                 if (!(value === null || value === undefined)) {
                     value = value.replace ? value.replace('\n', '\\n') : value // 转义转义换行, 如果不是字符串返回原值
                 }
                 // app.debug(value, typeof value)
-                cont += this.colorFontType(value) // 调用方法来染色类型对应的字体颜色
+                cont += no_color ? value : this.colorFontType(value) // 调用方法来染色类型对应的字体颜色
+
             }
             line.push(cont)
         })  // ~ 漂亮滴很呐!(赞赏)
-        return colors.reset + title + line.join(`\n${indent.repeat(rep_indent)}`)
+        const cont = title + line.join(`\n${indent.repeat(rep_indent)}`)
+        return (no_color ? '' : colors.reset) + cont
     }
 
 
@@ -692,8 +749,13 @@ class App {
      * @param {Request} req Request值
      * @param {Response} res Response值
      * @param {object | undefined} data 传入到网页的键值对用于模板替换
+     * @param {boolean} [is_meat_data=false] 是否创建meat以传递数据
      */
-    returnHTML(file_name, req, res, data = {}) {
+    returnHTML(file_name, req, res, data = {}, is_meat_data = false) {
+        const createMeatElement = (name, data) => {
+            // /(TAG)传递数据的meat元素/ 在这里创建
+            return `<meta name="data-${name}" content="${data}">\n`
+        }
         // 读取HTML文件内容
         res.set('Content-Type', 'charset=utf-8')
         this.readFile(path.join(__dirname, config.html_path, file_name), (html_cont) => {
@@ -708,9 +770,23 @@ class App {
             // HTML文件存在
 
             res.type('HTML')
-            data.__html_head = this.html_head_cont
-            res.send(this.renderTemplate(html_cont, data)) // 进行模板渲染
 
+            if (is_meat_data) {
+                let head_cont = `${this.html_head_cont}\n`
+                Object.keys(data).forEach((key) => {
+                    const value = data[key]
+                    head_cont += createMeatElement(key, value)
+                })
+                html_cont = this.renderTemplate(html_cont, {
+                    '__html_head': head_cont
+                })
+
+            } else {
+                data.__html_head = this.html_head_cont
+                html_cont = this.renderTemplate(html_cont, data)
+            }
+            res.send(html_cont) // 进行模板渲染
+            res.end()
         })
         // this.printAccess(req, res) // 打印访问日志
         return
@@ -719,21 +795,27 @@ class App {
     /**
      * 打印访问日志
      * @param {Request} req Request值
-     * @param {string} [message] 对于这条日志的补充信息
+     * @param {string} [msg] 对于这条日志的补充信息
      */
-    printAccess(req, message) {
+    printAccess(req, msg) {
         const color = this.colorFont
+        const new_line = '\n        '
         let more_info = ''
         if (req.method === 'POST') {
-            more_info = '| ' + (this.isObj(req.body) ? JSON.stringify(req.body) : req.body)
+            more_info = '| data: ' + new_line + (this.isObj(req.body) ? JSON.stringify(req.body) : req.body)
+        }
+
+        let message = ''
+        if (msg) {
+            message = '| ' + msg
         }
         app.log( // 打印访问日志
             color(req.ip, 'blue'),
             color(req.method, 'green'),
             color(req.url, 'gray'),
             color(`HTTP/${req.httpVersion}`, 'yellow'),
+            message,
             more_info,
-            message ? '| ' + message : ''
         )
     }
     /**
@@ -798,13 +880,14 @@ class Player {
      * @returns {string | undefined} 返回错误信息, 若没有问题则会为空字符串
      */
     push(song_data, order_name, callback) {
-        const returns = (value) => {return this.local_mode ? callback(value) : value}
-        const valid = (value, normal = null) => {return value ? value : normal}
+        const returns = (value) => { return this.local_mode ? callback(value) : value }
+        const valid = (value, normal = null) => { return value ? value : normal }
         if (!(song_data.title && song_data.src)) { // 检查必要参数
             app.warn('missing_param', this.push.name, song_data)
             return returns('missing_param')
         }
         const push = () => { // 临时定义函数用于兼容异步函数
+            if (!Player.list) Player.list = []
             const song_id = Player.list.length
             /**@type {Song} */
             const push_data = {
@@ -824,7 +907,7 @@ class Player {
             }
             Player.list.push(push_data) // 将播放歌曲的信息push到Player.list对象中
             // 打印新歌信息
-            app.info('push_song', app.objToStr(push_data.data, `song_data[${song_id}]`), song_id, push_data.info.name)
+            app.info('push_song', app.objToStr(push_data.data, { title: `song_data[${song_id}]` }), song_id, push_data.info.name)
         }
 
 
@@ -836,7 +919,7 @@ class Player {
                 'download_path': this.static_path,
                 'ext_name': 'mp3',
                 'url': song_src
-            },(hash) => {
+            }, (hash) => {
                 if (!hash) { // 如果无效
                     return callback('url_is_invalid')
                 }
@@ -849,7 +932,7 @@ class Player {
             push()
             return returns('')
         }
-        
+
     }
 
     /**
@@ -886,7 +969,7 @@ class Player {
         return music_path
     }
 
-    getMusicList(keyword) {}
+    getMusicList(keyword) { }
 }
 
 
@@ -944,19 +1027,29 @@ class User extends Player {
      * @param {string | undefined} param0.user_name 用户名
      * @param {number | undefined} param0.id 用户ID
      * @param {string} param0.password 用户密码
-     * @param {boolean} param0.is_temp 是否是临时用户 (临时用户不需要密码或client凭证)
+     * @param {boolean} param0.is_guest 是否是访客用户 (访客用户不需要密码或client凭证)
      * @param {string | undefined} param0.avatar 用户头像
      * @param {string | undefined} param0.email 用户邮箱
      * @param {string | undefined} param0.client_token client(临时)用户凭证
      * 
      */
-    constructor({user_name, id, password, is_temp = false, avatar, email, client_token}) {
+    constructor({ user_name, id, password, is_guest = false, avatar, email, client_token }) {
         super() // 构造继承的Player
-        
+
         /**存储用户数据内容文件 */
         this.user_file = config.user_file
         /**默认头像 */
         this.normal_avatar = config.normal_avatar
+
+
+        /**是否是访客用户 */
+        this.is_guest = false
+        if (is_guest) { // 访客用户
+            this.profile = config.guest_user.profile // 使用来自配置信息的访客用户信息
+            this.is_login = false
+            this.is_guest = true
+            return
+        }
 
         /**
          * 用户基本信息
@@ -973,8 +1066,6 @@ class User extends Player {
         /**(临时)登入凭证 */
         this.client_token = client_token
 
-        /**是否是临时用户 */
-        this.is_temp = is_temp
         /**是否已登入; 判断是否有效登入: 确保`config.user_file`的用户信息比对一致且算是有效登入*/
         this.is_login = false
 
@@ -1021,8 +1112,12 @@ class User extends Player {
      * @returns {UserData} 
      */
     get user_data() {
-        if (!this.is_login) app.throwError('not_init_use_method', User.name)
-        return this.all_user[this.profile.id]
+        if (!this.is_login || !this.is_guest) app.throwError('not_init_use_method', User.name)
+        if (this.is_login) {
+            return this.all_user[this.profile.id] // 正常登入的账户从`all_data`中获得数据
+        } else {
+            return config.guest_user // 其他账户返回访客登入信息
+        }
     }
 
     /**(user_data)获取用户profile信息 */
@@ -1089,7 +1184,7 @@ class User extends Player {
      * @param {object} param0.id 用户ID
      * @returns {'name_is_exist' | 'uid_is_exist' | ''} 返回哪个值存在于用户列表中
      */
-    isExits({name, id} = this.profile) {
+    isExits({ name, id } = this.profile) {
         let text = ''
         this.forEachUser((user_data) => {
             if (user_data.profile.name === name) text = 'name_is_exist'
@@ -1127,7 +1222,7 @@ class User extends Player {
         }
         return ''
     }
-    
+
     /**
      * 获取用户的Token用于验证或初始化用户身份验证信息
      * @param {string} name 用户名
@@ -1191,7 +1286,7 @@ class User extends Player {
         client_token = _data[1]
         /**@type {UserLogin} */
         const login_data = this.all_login_data[uid]
-        
+
         if (!login_data) return 'id_not_exist' // 不存在于登入列表
 
         const token = this.getLoginToken(client_token, login_data.slat)
@@ -1211,11 +1306,11 @@ class User extends Player {
         let password = this.profile.password
         let name = this.profile.name
         let id = this.profile.id
-        
+
         if (this.is_login) return 'is_login'
         const finish = (method = 'login') => { // 校验成功
             app.info('user_login', method)
-            app.debug(app.objToStr(user_data, 'user_data'))
+            app.debug(app.objToStr(user_data, { title: 'user_data' }))
             this.is_login = true
             this.profile = user_data.profile
             return ''
@@ -1223,7 +1318,7 @@ class User extends Player {
 
         /**@type {UserData} */
         let user_data
-        
+
         if (client_token) { // 使用凭证登入
             const err = this.tokenLogin(client_token)
             if (err) return err
@@ -1278,7 +1373,7 @@ class User extends Player {
      * 尝试注册一个用户实例
      * @param {{name: string, avatar: string, email: string, password: string}} profile 传入用户信息
      */
-    add({name, avatar, email, password} = this.profile, _init = false) {
+    add({ name, avatar, email, password } = this.profile, _init = false) {
         // 检测参数是否有效
         /**@type {boolean} 参数是否有效 */
         let param_valid = true
@@ -1297,7 +1392,7 @@ class User extends Player {
         const pwd_valid = this.isValid('password', password)
         if (pwd_valid) return pwd_valid
         // 验证 名称|UID 是否有重复
-        const is_exist = this.isExits({name: name, id: uid})
+        const is_exist = this.isExits({ name: name, id: uid })
         if (is_exist) return is_exist
 
         const token = this.getToken(name, uid, password)
@@ -1341,11 +1436,11 @@ class User extends Player {
     /**
      * (Player)点一首歌到播放列表
      * @param {SongData} song_data 
-     * @param {function(boolean)=} callback 
+     * @param {function(string)=} callback 
      * @returns {string}
      */
     order(song_data, callback) {
-        const is_exist = typeof callback === 'function' 
+        const is_exist = typeof callback === 'function'
         const returns = (value) => {
             if (value === '_func') {
                 return is_exist ? callback : undefined
@@ -1354,12 +1449,14 @@ class User extends Player {
             }
         }
 
-        
-        if (!(this.is_login || this.is_temp)) return returns('not_login')
+
+        if (!(this.is_login || this.is_guest)) return returns('not_login')
         if (!this.user_data.role.order) return returns('not_role')
         return this.push(song_data, this.profile.name, returns('_func'))
     }
-} 
+
+    // (ADD)增加用户的基本修改操作: 修改密码 | 修改头像 ...
+}
 
 
 
@@ -1382,6 +1479,7 @@ _init_config()
 // 初始化对象
 const app = new App()
 const player = new Player()
+const GuestUser = new User({ 'is_guest': true })
 // 初始化版本信息
 app.version = 'dev-202408_17'
 
@@ -1409,7 +1507,7 @@ args.forEach((key, index) => {
 
 // 输出基本信息
 app.log(app.colorFont(' QUPR ', 'white', 'green'), app.colorFont(' ONLINE-SONG ', 'white', 'cyan'), app.colorFont(app.version, 'yellow')) // 版本号与项目名称
-app.debug(app.objToStr(config, app.colorFont('SETTING', 'gray'))) // 配置信息
+app.debug(app.objToStr(config, { title: app.colorFont('SETTING', 'gray') })) // 配置信息
 
 
 
@@ -1430,31 +1528,43 @@ httpApp.use((req, res, next) => {
     // (i)这里是身份验证的逻辑
     const invalid = (type = 'need_login') => {
         const toURL = app.toUrlStr
-        res.redirect(`/login?from=${toURL(req.path)}&type=${toURL(type)}`) // /(TAG)用户验证失败/
+        const url = `/login?from=${toURL(req.path)}&type=${toURL(type)}`
+        // /(TAG)用户验证失败/
+        res.status(403)
+        app.returnHTML('4xx.html', req, res, {
+            'status': 403,
+            'type': type,
+            'to': url
+        }, true)
+        app.printAccess(req, app.renderColorText('[[red]]403'))
     }
 
-    config.guest_routes.forEach((allow_dir) => { // 遍历每个允许访问的路径
-        if (!app.isSubPath(allow_dir, req.path)) { // 白名单
-            // 验证用户身份
-            let _err = ''
-
-            let token = ''
-            try {
-                token = req.cookies['login_token']
-            } catch (err) {
-                return invalid('token_not_found')
-            }
-
-            if (!token) invalid('token_is_null')
-            const user = new User({}) // 尝试实例化user
-            _err = user.login(token)
-            if (_err) return invalid(_err)
-            
-            res.locals.user = user // 验证成功赋值到对象
-        }
+    let role = false
+    const path = req.path
+    config.guest_routes.forEach((allow_dir) => { // 验证白名单
+        if (app.matchPath(allow_dir, path)) role = true
     })
 
-    app.printAccess(req) // (ADD)在第二个参数内打印更多访问信息, 如状态或用户名
+    res.locals.user = GuestUser
+    if (!role) {
+        let _err = ''
+        let token = ''
+
+        try {
+            token = req.cookies['login_token']
+        } catch (err) {
+            return invalid('token_not_found')
+        }
+
+        if (!token) return invalid('token_is_null')
+        const user = new User({}) // 尝试实例化user
+        _err = user.login(token)
+        if (_err) return invalid(_err)
+
+        res.locals.user = user // 验证成功赋值到对象
+    }
+
+    app.printAccess(req, `${res.locals.user.profile.name}`)
 
     next()
 })
@@ -1489,14 +1599,25 @@ httpApp.get('/order', (req, res) => {
 })
 
 // 不存在页面
-httpApp.get('/not_found', (req, res) => {
-    app.returnHTML('not_found.html', req, res)
-    res.end()
-})
+// httpApp.get('/not_found', (req, res) => {
+//     app.returnHTML('4xx.html', req, res, {
+//         status: 404,
+//         type: 'not_found',
+//         from: req.path
+//     })
+//     res.end()
+// })
 
 // 调试页面
 httpApp.get('/dev', (req, res) => {
-    app.returnHTML('dev.html', req, res)
+    app.returnHTML('dev.html', req, res, {
+        'user_data': app.objToStr(
+            res.locals.user, {
+            no_color: true,
+            title: res.locals.user.profile.name
+        }
+        )
+    })
     res.end()
 })
 
@@ -1532,6 +1653,9 @@ httpApp.post('/api', (req, res) => {
         data: {}
     }
 
+    /**从上一个处理中获得的用户信息 @type {User | undefined} */
+    const user = res.locals.user
+
     /**
      * 传入值,若值非有效输出为默认值
      * @param {any} value 待检测值
@@ -1550,7 +1674,7 @@ httpApp.post('/api', (req, res) => {
             if (!item && is_valid) { // 无效参数且没有返回错误信息的情况
                 // app.warn('invalid_request_param', app.objToStr(req_data))
                 res_data.valid = false
-                res_data.message = 'param_is_invalid'
+                res_data.message = 'missing_param'
                 endReq()
 
                 is_valid = false
@@ -1560,6 +1684,11 @@ httpApp.post('/api', (req, res) => {
     }
     /**
      * 结束这个响应, 向客户端发送res_data
+     * @example
+     * res_data.valid = true
+     * res_data.message = ''
+     * res_data.data = {}
+     * return endReq()
      */
     const endReq = () => {
         res.send(res_data).end()
@@ -1569,27 +1698,32 @@ httpApp.post('/api', (req, res) => {
     const param_command = { // 指定对应请求的操作
         'add_song': () => {
             // (IMP) 注意,这里的player.push方法后期要兼容用户系统改为user.order
-            if (!isValid(req_data.src, req_data.title)) return // 检查必要参数
-            player.push({
+            if (!isValid(req_data.src, req_data.title)) return // 检查参数
+            if (!user) {
+                res_data.message = 'user_not_exist'
+                res_data.valid = false
+                return endReq()
+            }
+            user.order({
                 'cover': req_data.cover,
                 'singer': req_data.singer,
                 'src': req_data.src,
                 'time': req_data.time,
                 'title': req_data.title,
                 'lyric': req_data.lyric
-            }, valid(req_data.order), (valid) => {
-                if (valid) { // 是否有效
-                    endReq()
-                } else {
+            }, (_err) => { // 获取错误信息
+                if (!_err) { // 添加成功
+                    return endReq()
+                } else { // 添加失败返回错误信息
                     res_data.valid = false
-                    res_data.message = 'push_list_error'
-                    endReq()
+                    res_data.message = _err
+                    return endReq()
                 }
             })
 
         },
         'login': () => {
-            
+
         }
     }
 
@@ -1634,7 +1768,11 @@ httpApp.use(`/${config.static_url}`, express.static(config.static_path)) // 设�
 /**路由不存在 */
 httpApp.use((req, res, next) => {
     res.status(404)
-    app.returnHTML('not_found.html', req, res)
+    app.returnHTML('4xx.html', req, res, {
+        status: 404,
+        type: 'not_found',
+        to: '/'
+    }, true)
     next()
 })
 

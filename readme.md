@@ -38,6 +38,8 @@
 在VSCode中:
 折叠所有 `Ctrl+Shift+[`
 展开所有 `Ctrl+Shift+]`
+API:
+网易云音乐使用`https://music.163.com/song/media/outer/url?id=`来获取音乐
 
 
 #### 花里胡哨的IMP

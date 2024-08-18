@@ -1,0 +1,34 @@
+p {
+    text-indent: 2em;
+}
+
+
+
+/* 布局 */
+.space {
+    max-width: 540px;
+    margin: 0 auto;
+    /* padding: 0 1em; */
+}
+
+
+
+/* 消息盒|确认窗口 */
+#msg-box article footer {
+    display: flex;
+    justify-content: space-between;
+}
+
+#msg-box[data-style="message"] article footer .cancel {
+    pointer-events: none;
+    opacity: 0;
+}
+
+#msg-box[data-style="confirm"] article header .close {
+    pointer-events: none;
+    opacity: 0;
+}
+
+#msg-box[data-style="confirm"] .overlay {
+    pointer-events: none;
+}

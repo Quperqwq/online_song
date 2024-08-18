@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 来自HTML渲染引擎的数据 -->
+    {{ __html_head }}
+    <!-- end -->
+     <style>
+        #title {
+            margin-top: .4em;
+        }
+     </style>
+    <title>Error</title>
+</head>
+<body>
+    
+    <h2 id="title" class="space"> ... </h2>
+    <hr>
+    <p id="content" class="space"></p>
+    <p class="space"><span id="time">--</span>秒后自动<a id="href" href="">跳转</a></p>
+    
+    <script>
+        /**网页响应的状态码 @type {string} */
+        const status = app.getMetaData('status')
+        /**错误类型 @type {string} */
+        const type = app.getMetaData('type')
+        /**跳转到哪个URL @type {string} */
+        const to_url = app.getMetaData('to')
+        /**倒计时 @type {number} */
+        let time = valid(+app.getMetaData('time'), 4)
+
+        // 更新内容
+        const get = id_name => document.getElementById(id_name)
+        const e_title = get('title')
+        const e_content = get('content')
+        const e_time = get('time')
+        const e_href = get('href')
+
+        e_title.innerText = valid(app.getText('status', status), '发生错误')
+        e_content.innerText = app.getText('error', type)
+        e_href.href = valid(to_url, '/')
+        
+        // 倒计时
+        const countDown = () => {
+            e_time.innerText = time
+            setTimeout(() => {
+                e_time.innerText = time
+                time -= 1
+                if (time >= 0) {
+                    countDown()
+                    return
+                }
+                over()
+            }, 1000)
+        }
+
+        const over = () => { // 倒计时结束
+            switchURL(to_url)
+        }
+
+        countDown()
+    </script>
+</body>
+</html>
