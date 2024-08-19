@@ -239,7 +239,7 @@ label {
 }
 
 [class^=icon-]:before,[class*=" icon-"]:before {
-    margin: 0 .6em 0 0
+    margin: 0 .6em 0 0;
 }
 
 i[class^=icon-]:before,i[class*=" icon-"]:before {
@@ -293,7 +293,7 @@ i[class^=icon-]:before,i[class*=" icon-"]:before {
 .dropimage,button,.button,[type=submit] {
     margin: .3em 0;
     cursor: pointer;
-    transition: all .3s;
+    transition: 300ms;
     border-radius: .2em;
     height: auto;
     vertical-align: baseline;
@@ -3422,11 +3422,11 @@ input.stack:focus+input,input.stack:focus+textarea,input.stack:focus+select,text
 }
 
 .modal .overlay~* header,.card header,.modal .overlay~* section,.card section,.modal .overlay~*>p,.card>p {
-    padding: .6em .8em
+    padding: .6em .8em;
 }
 
 .modal .overlay~* section,.card section {
-    padding: .6em .8em 0
+    padding: .6em .8em 0;
 }
 
 .modal .overlay~* hr,.card hr {
@@ -3606,7 +3606,7 @@ input.stack:focus+input,input.stack:focus+textarea,input.stack:focus+select,text
     table-layout: fixed;
     position: relative;
     padding-left: 0;
-    transition: all .3s;
+    transition: 300ms;
     border-spacing: 0;
     margin: 0
 }

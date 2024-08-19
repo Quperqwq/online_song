@@ -1,8 +1,29 @@
+/* 来自icomoon的字体图标库 */
+@font-face {
+    font-family: 'icomoon';
+    src:  url('/src/font/icomoon.eot?ftv8e6');
+    src:  url('/src/font/icomoon.eot?ftv8e6#iefix') format('embedded-opentype'),
+      url('/src/font/icomoon.ttf?ftv8e6') format('truetype'),
+      url('/src/font/icomoon.woff?ftv8e6') format('woff'),
+      url('/src/font/icomoon.svg?ftv8e6#icomoon') format('svg');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
 p {
     text-indent: 2em;
 }
 
 
+.link {
+    color: steelblue;
+    font-weight: 500;
+}
+
+.disabled {
+    pointer-events: none;
+}
 
 /* 布局 */
 .space {
@@ -14,6 +35,11 @@ p {
 
 
 /* 消息盒|确认窗口 */
+#msg-box h1 {
+    text-align: center;
+    padding: 0 1em;
+}
+
 #msg-box article footer {
     display: flex;
     justify-content: space-between;
@@ -24,11 +50,39 @@ p {
     opacity: 0;
 }
 
-#msg-box[data-style="confirm"] article header .close {
+#msg-box[data-style="confirm"] article header .close,
+#msg-box:not([data-style="wait"]) h1,
+#msg-box[data-style="wait"] article {
     pointer-events: none;
     opacity: 0;
 }
 
-#msg-box[data-style="confirm"] .overlay {
-    pointer-events: none;
+
+/* 导航栏 */
+nav .menu * {
+    display: inline-block;
+}
+
+[class*="icon-"]::before {
+    font-family: 'icomoon';
+}
+
+.icon-menu::before {
+    content: '\e9bd';
+}
+
+.icon-home::before {
+    content: '\e900';
+}
+
+.icon-login::before {
+    content: '\e971';
+}
+
+.icon-order::before {
+    content: '\ea0a';
+}
+
+.icon-player::before {
+    content: '\ea15';
 }

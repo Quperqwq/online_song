@@ -6,6 +6,7 @@ import path from 'path' // 路径
 import fetch from 'node-fetch' // fetch网络API
 import mime from 'mime' // 文件mime类型
 import crypto from 'crypto'
+import cookieParser from 'cookie-parser'
 
 const httpApp = express()
 
@@ -438,14 +439,16 @@ class App {
      * @returns {string}
      */
     date() {
-        return this.modDate.toLocaleString()
+        // return this.modDate.toLocaleString()
+        return new Date().toLocaleString()
     }
 
     /**
      * 获取时间戳
      */
     getTime() {
-        return this.modDate.getTime()
+        // return this.modDate.getTime() // 容易触发缓存机制
+        return new Date().getTime()
     }
 
     /**
@@ -714,7 +717,7 @@ class App {
      * @param {number} [param1.rep_indent=1] 缩进内容重复次数
      * @param {boolean} [param1.no_color=false] 是否不启用控制台颜色
      */
-    objToStr(obj, { title = undefined, rep_indent = 1, indent = ' |-', no_color = false }) {
+    objToStr(obj, { title = undefined, rep_indent = 1, indent = ' |-', no_color = false } = {}) {
         if (!(typeof obj === 'object')) {
             app.warn('consol_invalid_param', obj)
         }
@@ -1011,6 +1014,7 @@ class User extends Player {
      * 
      * @typedef {Object} UserVerify 用户验证信息相关
      * @property {string} token 用户身份验证信息; 区别于`UserLogin.token`,该值是用于校验密码和账户是否一致
+     * @property {string} salt 随机值
      * 
      * @typedef {Object} UserRole 用户权限
      * @property {boolean} playing 
@@ -1033,7 +1037,7 @@ class User extends Player {
      * @param {string | undefined} param0.client_token client(临时)用户凭证
      * 
      */
-    constructor({ user_name, id, password, is_guest = false, avatar, email, client_token }) {
+    constructor({ user_name, id, password, is_guest = false, avatar, email, client_token } = {}) {
         super() // 构造继承的Player
 
         /**存储用户数据内容文件 */
@@ -1125,6 +1129,11 @@ class User extends Player {
         return this.user_data.profile
     }
 
+    /**(user_data)获取用户verify信息 */
+    get user_verify() {
+        return this.user_data.verify
+    }
+
     /**初始化内容 */
     _initData() {
         const time = app.getTime()
@@ -1204,15 +1213,20 @@ class User extends Player {
             special: /[\\\/\*\+\?\.\^\$\|\(\)\[\]\{\}]/,
             /**密码 */
             password: /^[a-zA-Z0-9_]+$/,
+            /**全部是数字 */
+            all_number: /^\d+$/,
         }
         if (!(typeof value === 'string')) return 'param_invalid'
         switch (type) {
             case 'name':
+                // /(TAG)校验用户名/
                 if (value.length < 4) return 'name_too_short'
                 if (value.length > 12) return 'name_too_long'
                 if (reg.special.test(value)) return 'name_have_special_char'
+                if (reg.all_number.test(value)) return 'all_number'
                 break
             case 'password':
+                // /(TAG)校验密码/
                 if (value.length < 6) return 'password_too_short'
                 if (value.length > 16) return 'password_too_long'
                 if (!reg.password.test(value)) return 'password_have_special_char'
@@ -1224,14 +1238,21 @@ class User extends Player {
     }
 
     /**
-     * 获取用户的Token用于验证或初始化用户身份验证信息
-     * @param {string} name 用户名
+     * 获取用户的Token用于验证或初始化用户身份验证信息;
+     * 
+     * 初次获取用户Token成功后会在实例的_token属性中给出_salt值, 后续登入需要给出salt
      * @param {string} uid 用户UID
      * @param {string} password 密码
+     * @param {string} salt 随机值; 指定为'__init'为初次获取
      */
-    getToken(name = this.profile.name, uid = this.profile.id, password = this.profile.password) {
-        const plain_token = `${uid}-${name}-${password}/${__salt}` // 这里的token经过hash计算后得到一个唯一token, token的特征值需要独一无二
-        // app.log(plain_token)
+    getToken(uid, password, salt) {
+        if (!(uid && password && salt)) return ''
+        if (salt === '__init') { // 如果指定为__init则将salt值将初始化
+            salt = app.getRandomHex(8)
+            this._salt = salt
+        }
+        const plain_token = `${uid}-${password}/${salt}/${__salt}` // 这里的token经过hash计算后得到一个唯一token, token的特征值需要独一无二
+        // app.debug('plain_token: ', plain_token)
         return app.getStrHash(plain_token)
     }
 
@@ -1262,8 +1283,10 @@ class User extends Player {
         const slat = app.getRandomHex(8)
         const time = app.getTime()
 
-        const client_token = app.getStrHash(`${uid}-${this.user_profile.name}-${time}`, 'sha512')
-        const token = this.getLoginToken(client_token, slat)
+        // /(TAG)登入token生成/
+        const client_token = app.getStrHash(`${uid}-${time}`, 'sha256') // client_token是返回到客户端的值 这个值表示用户的凭证 可以用临时登入; 可以理解为随机值
+
+        const token = this.getLoginToken(client_token, slat) // token是保存在服务端的值 这个值用于校验用户的凭证
 
         this.all_login_data[uid] = {
             'id': uid,
@@ -1281,7 +1304,8 @@ class User extends Player {
      * @param {string} client_token 用户凭证
      */
     tokenLogin(client_token) {
-        const _data = (client_token.split('-'))
+        if (!client_token) return 'value_invalid'
+        const _data = client_token.split('-')
         const uid = _data[0]
         client_token = _data[1]
         /**@type {UserLogin} */
@@ -1306,6 +1330,8 @@ class User extends Player {
         let password = this.profile.password
         let name = this.profile.name
         let id = this.profile.id
+        let salt = ''
+        
 
         if (this.is_login) return 'is_login'
         const finish = (method = 'login') => { // 校验成功
@@ -1328,6 +1354,8 @@ class User extends Player {
             return user_data ? finish('token') : 'user_not_found'
         }
 
+
+
         // 使用其他登入方式
         if (!((name || id) || password)) return 'lost_param'
 
@@ -1346,6 +1374,7 @@ class User extends Player {
                     valid_name = true
                     uid = item.profile.id
                     token = item.verify.token
+                    salt = item.verify.salt
                     user_data = item
                 }
             })
@@ -1356,13 +1385,14 @@ class User extends Player {
             if (!user_data) return 'id_not_found'
             name = user_data.profile.name
             token = user_data.verify.token
+            salt = user_data.verify.salt
             uid = id
         }
 
-        // app.log(user_data)
-
         // 校验token
-        const get_token = this.getToken(name, uid, password)
+        const get_token = this.getToken(uid, password, salt)
+        // app.log('pwd:', password, 'id:', uid, 'salt:', salt)
+
         if (!(get_token === token)) return 'password_error'
 
         // 校验成功
@@ -1395,7 +1425,8 @@ class User extends Player {
         const is_exist = this.isExits({ name: name, id: uid })
         if (is_exist) return is_exist
 
-        const token = this.getToken(name, uid, password)
+        const token = this.getToken(uid, password, '__init')
+        if (!token) return 'get_token_error'
         const time = app.getTime()
 
         // 更新用户列表信息
@@ -1413,7 +1444,8 @@ class User extends Player {
                 'id': uid
             },
             'verify': {
-                'token': token
+                'token': token,
+                'salt': this._salt
             },
             'role': user_role,
             'info': {
@@ -1429,7 +1461,9 @@ class User extends Player {
 
         // 更新实例信息
         if (_init) return ''
-        if (this.login({ name: name, password: password })) return 'unexpected'
+        
+        // app.log(this.login())
+        if (this.login()) return 'unexpected'
         return ''
     }
 
@@ -1456,6 +1490,52 @@ class User extends Player {
     }
 
     // (ADD)增加用户的基本修改操作: 修改密码 | 修改头像 ...
+
+    /**
+     * 更改(新)用户的信息
+     * @param {'name' | 'password' | 'avatar' | 'email'} type 更改项目
+     * @param {string} value 更改后的值
+     */
+    changeData(type, value) {
+        if (!this.is_login) return 'not_login'
+        const uid = this.user_profile.id
+        const salt = this.user_verify.salt
+        let _err = ''
+
+        switch (type) {
+            case 'password':
+                // 密码
+                _err = this.isValid('password', value)
+                if (_err) return _err
+
+                this.user_verify.token = this.getToken(uid, value, salt)
+                this.all_login_data[this.user_profile.id] = undefined // 清除用户(临时)登入信息
+                break
+
+            case 'name':
+                // 名称
+                _err = this.isValid('name', value)
+                if (_err) return _err
+
+                this.user_data.profile.name = value
+                break
+
+            case 'avatar':
+                // 头像
+                // (ADD)更改头像逻辑
+                this.user_data.profile.avatar = value
+                break
+
+            default:
+                // 其他情况
+                if (this.user_data.profile[type] === undefined) return 'type_not_exist'
+                this.user_data.profile[type] = value
+        }
+        this.user_data.info.mtime = app.getTime()
+        this.update()
+
+        return ''
+    }
 }
 
 
@@ -1481,7 +1561,7 @@ const app = new App()
 const player = new Player()
 const GuestUser = new User({ 'is_guest': true })
 // 初始化版本信息
-app.version = 'dev-202408_17'
+app.version = 'dev-202408_20'
 
 
 
@@ -1522,10 +1602,14 @@ app.debug(app.objToStr(config, { title: app.colorFont('SETTING', 'gray') })) // 
 // 中间件部分
 
 httpApp.use(express.json()) // 配置json解析中间件
+httpApp.use(cookieParser()) // 配置Cookie解析中间件
 
 // 打印访问日志并验证身份
 httpApp.use((req, res, next) => {
     // (i)这里是身份验证的逻辑
+    //    确定当前访问路径是否让访客访问 -> 否, 验证coolie_token -> 否, 返回无权限
+    // (FIX)需要优化验证访问用户的逻辑, 应当符合本项目的`函数式`代码风格
+
     const invalid = (type = 'need_login') => {
         const toURL = app.toUrlStr
         const url = `/login?from=${toURL(req.path)}&type=${toURL(type)}`
@@ -1539,6 +1623,7 @@ httpApp.use((req, res, next) => {
         app.printAccess(req, app.renderColorText('[[red]]403'))
     }
 
+
     let role = false
     const path = req.path
     config.guest_routes.forEach((allow_dir) => { // 验证白名单
@@ -1546,6 +1631,8 @@ httpApp.use((req, res, next) => {
     })
 
     res.locals.user = GuestUser
+
+    // (IMP)(!)这里的代码逻辑有问题: 如果在访客可访问的URL内则不会进行Token验证, 这就导致了登入用户会看到`GuestUser`身份
     if (!role) {
         let _err = ''
         let token = ''
@@ -1694,10 +1781,22 @@ httpApp.post('/api', (req, res) => {
         res.send(res_data).end()
     }
 
+    /**
+     * 检查是否有错误信息, 若有将结束响应返回错误信息, 函数返回true; 反之false
+     * @param {string} err 错误信息
+     */
+    const checkErr = (err) => {
+        if (!err) return false
+        res_data.valid = false
+        res_data.message = err
+        endReq()
+        return true
+    }
+
+    /**来自客户端的请求参数 @type {object} */
     const req_data = req.body // 获取请求体
     const param_command = { // 指定对应请求的操作
         'add_song': () => {
-            // (IMP) 注意,这里的player.push方法后期要兼容用户系统改为user.order
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
             if (!user) {
                 res_data.message = 'user_not_exist'
@@ -1723,7 +1822,34 @@ httpApp.post('/api', (req, res) => {
 
         },
         'login': () => {
+            // /(TAG)登入API方法/
+            let _err = ''
+            /**传入的用户名或ID */
+            let user_name = req_data.name
+            let user_id
+            /**传入的密码 */
+            const user_password = req_data.password
 
+            if (!isValid(user_name, user_password)) return // 检查传参有效性
+
+            if (!isNaN(+user_name)) user_id = +user_name
+
+            app.log(user_name, user_id, user_password)
+            
+            const user = new User({ // 尝试实例化User
+                'user_name': user_name,
+                'id': user_id,
+                'password': user_password
+            })
+            _err = user.login()
+            if (checkErr(_err)) return // 登入失败
+
+            // 登入成功
+            const client_token = user.addLogin()
+            res_data.valid = true
+            res_data.data.token = client_token
+            endReq()
+            return
         }
     }
 
@@ -1807,19 +1933,26 @@ if (!app.test_mode) { // 是否是测试模式
 
 
     // config.local_music_mode = true
-    // const user = new User({'user_name': 'admin', 'password': '12345678'})
-    // // app.log(user.add())
-    // app.log('login:', user.login())
+    // const user = new User({'id': '10002', 'password': '1919810'})
+    const user = new User({'user_name': 'Quper', 'password': '114514'})
+
+    // app.log('add:', user.add())
+    app.log('login:', user.login())
 
 
-    // app.log('addLogin:', user.addLogin())
+    app.log('addLogin:', user.addLogin())
+    setTimeout(() => {
+        app.log('addLogin:', user.addLogin())
+    }, 1485)
+    // app.log('changeData:', user.changeData('password', '1919810'))
+
     // app.log('order:', user.order({
     //     'src': 'https://music.163.com/song/media/outer/url?id=1501952920',
     //     'title': 'test_error'
     // }, (valid) => {app.log('valid:', valid)}
     // ))
 
-    // app.logObj(user.all_data)
+    // app.logObj(user.all_login_data)
 
 }
 

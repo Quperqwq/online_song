@@ -1,6 +1,7 @@
 class App {
     static_url = '/src'
     debug_mode = true
+    api_url = '/api'
     lang_text = {
         'zh-CN': {
             status: {
@@ -15,24 +16,47 @@ class App {
             },
             error: {
 
+            },
+            module: {
+                'menu': '菜单',
+            },
+            page_name: {
+                'home': '主页',
+                'order': '点歌',
+                player: '播放',
+                login: '登入',
             }
         }
+    }
+    src_url = {
+        'ico_logo': '/src/favicon.ico',
+        'png_logo': '/src/logo.png',
     }
     
     constructor(lang = 'zh-CN') {
         // elem_... 表示Element, 在本类中通常表示一个全局Element;
         // elems_... 表示Elements, 在本类中通常表示一个全局Object内是Element
         const _text = this.lang_text[lang]
+        
         this.text = _text ? _text : Object.keys(this.lang_text)[0]
         this.mod = {
             xhr: new XMLHttpRequest()
+        }
+        /**点击事件的回调函数 */
+        this.eventCallbacks = {
+            msg_box: {
+                yes: () => {},
+                no: () => {}
+            }
         }
 
         // init...
         document.addEventListener('DOMContentLoaded', () => {
             this.initMsgBox()
+            this.initHeader()
         })
     }
+
 
     /**
      * 创建一个fetch请求以便使用API
@@ -75,6 +99,15 @@ class App {
             })
     }
 
+    /**
+     * 使用服务端API与其通讯
+     * @param {object} data 传入对象
+     * @param {function(object)=} callback 传入回调函数
+     */
+    useAPI(data, callback) {
+        this.makeFetch('POST', this.api_url, data, callback)
+    }
+
     // 工具函数-路径相关
 
     /**
@@ -114,6 +147,8 @@ class App {
     }
 
 
+
+
     // 工具函数-dom相关
     /**
      * 获取从HTML模板渲染引擎获得的值
@@ -138,8 +173,24 @@ class App {
             const value = tag_attrib[name]
             element.setAttribute(name, value)
         })
-        element.innerText = tag_content
+        element.innerHTML = tag_content
         return element
+    }
+
+    /**
+     * 禁用一个DOM元素(强制设置disabled值)
+     * @param {Element} element 传入元素
+     * @param {boolean} is_disabled 是否禁用
+     */
+    disabledElement(element, is_disabled) {
+        if (is_disabled) {
+            element.classList.add('disabled')
+            element.setAttribute('disabled', 'true')
+        } else {
+            element.classList.remove('disabled')
+            element.removeAttribute('disabled')
+        }
+        return
     }
 
     /**
@@ -155,6 +206,8 @@ class App {
         })
     }
 
+
+
     // 网页相关
     /**
      * 切换到指定URL
@@ -164,6 +217,9 @@ class App {
         if (!this.debug_mode) window.location.href = url
     }
 
+
+
+    // msgBox
     /**
      * 初始化(创建)一个消息框
      * @param {Element} [element] 传入Element或留空
@@ -182,12 +238,12 @@ class App {
         const _box = { // 创建元素
             checkbox: create('input', {type: 'checkbox', id: 'msg-enter'}),
             overlay: create('label', {for: 'msg-enter', class: 'overlay'}),
-            root_main: create('article'),
-            main: {
-                root_head: create('header'),
-                head: {
+            main: create('article'),
+            root_main: {
+                head: create('header'),
+                root_head: {
                     title: create('h3'),
-                    close: create('label', {for: 'msg-enter',class: 'close', disabled: true}, '×')
+                    close: create('label', {for: 'msg-enter',class: 'close', disabled: true}, '&times;')
                 },
                 cont: create('section', {class: 'content'}),
                 root_footer: create('footer'),
@@ -195,25 +251,74 @@ class App {
                     cancel: create('label', {for: 'msg-enter', class: 'cancel button error'}, '否'),
                     success: create('label', {for: 'msg-enter', class: 'button success'}, '是')
                 }
-            }
+            },
+            'wait_title': create('h1')
         }
-        join(_box.main.root_footer, _box.main.footer)
-        join(_box.main.root_head, _box.main.head)
-        join(_box.root_main, _box.main)
+        join(_box.root_main.root_footer, _box.root_main.footer)
+        join(_box.root_main.head, _box.root_main.root_head)
+        join(_box.main, _box.root_main)
         join(element, _box)
         element.className = 'modal'
+
+        const _footer = _box.root_main.footer
+        const _callback = this.eventCallbacks.msg_box
+        _footer.cancel.addEventListener('click', () => {
+            this.lockMsgBox(false)
+            this.lockMsgBoxButton(true)
+            _callback.no(false)
+        })
+        _footer.success.addEventListener('click', () => {
+            this.lockMsgBox(false)
+            this.lockMsgBoxButton(true)
+            _callback.yes(true)
+        })
 
         this.elems_msg_box_all = _box
         this.elems_msg_box = {
             root: element,
-            title: _box.main.head.title,
-            content: _box.main.cont,
-            button_no: _box.main.footer.cancel,
-            button_yes: _box.main.footer.success,
-            checkbox: _box.checkbox
+            title: _box.root_main.root_head.title,
+            content: _box.root_main.cont,
+            button_no: _box.root_main.footer.cancel,
+            button_yes: _box.root_main.footer.success,
+            checkbox: _box.checkbox,
+            wait_title: _box.wait_title
         }
+        
         console.log('msg box init ok.')
         return true
+    }
+
+    /**
+     * 检查msgBox是否有效
+     */
+    validMsgBox() {
+        if (!this.elems_msg_box) {
+            console.error('message box not init.')
+            return false
+        }
+        return true
+    }
+
+    /**
+     * 锁定msgBox使其不允许关闭
+     * @param {boolean} is_lock 是否锁定
+     */
+    lockMsgBox(is_lock) {
+        if (!this.validMsgBox()) return
+        this.elems_msg_box.checkbox.disabled = is_lock ? true : false
+        return
+    }
+
+    /**
+     * 锁定msgBox的按钮
+     * @param {boolean} is_lock 是否锁定
+     */
+    lockMsgBoxButton(is_lock) {
+        if (!this.validMsgBox()) return
+        
+        this.disabledElement(this.elems_msg_box.button_no, is_lock)
+        this.disabledElement(this.elems_msg_box.button_yes, is_lock)
+        return
     }
 
     /**
@@ -224,26 +329,91 @@ class App {
      * @param {function(boolean)=} [callback] 回调函数, 返回用户确认信息
      */
     msgBox(title, content, is_msg = true, callback) {
-        if (!this.elems_msg_box) return console.error('message box not init.')
+        if (!this.validMsgBox()) return
         const es = this.elems_msg_box
 
+        this.lockMsgBoxButton(false)
         es.checkbox.checked = true
 
         if (is_msg) { // message样式
             es.root.setAttribute('data-style', 'message')
         } else { // confirm样式
             es.root.setAttribute('data-style', 'confirm')
-            es.button_no.addEventListener('click', () => {
-                callback(false)
-            })
-            es.button_yes.addEventListener('click', () => {
-                callback(true)
-            })
+
+            this.lockMsgBox(true)
+            const _callback = this.eventCallbacks.msg_box
+            _callback.no = callback
+            _callback.yes = callback
         }
 
         es.title.innerText = title
         es.content.innerText = content
 
+    }
+
+    /**
+     * 显示一个等待框
+     * @param {boolean} is_wait 是否显示等待框
+     * @param {string} [title] 等待时显示的标题
+     */
+    waitBox(is_wait, title) {
+        if (!this.elems_msg_box) return console.error('message box not init.')
+        const es = this.elems_msg_box
+        if (is_wait) es.root.setAttribute('data-style', 'wait')
+
+        es.checkbox.checked = is_wait
+        this.lockMsgBox(is_wait)
+        if (title) es.wait_title.innerText = title
+        return
+    }
+
+
+    // head
+    /**
+     * 初始化一个页面导航栏
+     * @param {Element} [element] DOM元素; 若不指定则自动在页面获取`page-nav`ID的DOM元素
+     */
+    initHeader(element, title = 'OnlineSong') {
+        if (!element) element = document.getElementById('page-nav')
+        if (this.elems_header) return false
+        if (!element) return false
+        element.innerHTML = ''
+
+        const create = this.createElement
+        const join = this.joinElement
+        const text = (type, key) => this.getText(type, key)
+        const src = this.src_url
+
+        const menu = [
+            create('a', {href: '/', class: 'pseudo button icon-home'}, text('page_name', 'home')),
+            create('a', {href: '/login', class: 'pseudo button icon-login'}, text('page_name', 'login')),
+            create('a', {href: '/order', class: 'pseudo button icon-order'}, text('page_name', 'order')),
+            create('a', {href: '/player', class: 'pseudo button icon-player'}, text('page_name', 'player')),
+        ]
+        const header = {
+            'brand': create('section', {'class': 'brand'}),
+            'root_brand': {
+                'logo': create('img', {'class': 'logo', 'src': src.png_logo, 'alt': 'logo'}),
+                'content': create('span', {}, title)
+            },
+            'checkbox': create('input', {'id': 'menu', 'type': 'checkbox', 'class': 'show'}),
+            'expend_button': create('label', {for: 'menu', class: 'burger pseudo button'}, text('module', 'menu')),
+            'menu': create('div', {class: 'menu'}),
+            'root_menu': menu
+        }
+        join(header.menu, menu)
+        join(header.brand, header.root_brand)
+        join(element, header)
+        
+        this.elems_header_all = header
+        this.elems_header = {
+            logo: header.root_brand.logo,
+            title: header.root_brand.content,
+            menu: menu
+        }
+
+        console.log('nav init ok.')
+        return true
     }
 }
 
@@ -253,6 +423,11 @@ const app = new App()
 
 // init function
 const valid = (value, normal) => { return value ? value : normal }
+/**
+ * [简](document.getElementById)获取页面的元素
+ * @param {string} id_name 传入ID name
+ */
+const getEBI = (id_name) => {return document.getElementById(id_name)}
 
 // init page...
 const _initPage = () => {

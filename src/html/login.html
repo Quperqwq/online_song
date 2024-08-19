@@ -10,40 +10,148 @@
         .input {
             width: 70%;
             margin: 0 auto;
-            margin-top: 2em;
+            margin-top: .2em;
+            /* padding: 0 !important; */
         }
 
-        .input :not(:first-child) {
+        .input .line:not(:first-child) {
             margin-top: .7em;
         }
+
+        .row .card {
+            margin: 0 1em;
+        }
+
+
+        .card footer {
+            display: flex;
+            justify-content: space-between;
+        }
+
+
+
+        .tabs {
+            text-align: center;
+            margin-top: 4em;
+        }
+
     </style>
 </head>
 
 <body>
 
-    <section class="tabs two space">
-        <input id="tab-1" type="radio" name="card" checked >
+    <nav id="page-nav"></nav>
+
+    <section class="tabs three space">
+        <input id="tab-1" type="radio" name="card" checked>
         <label class="pseudo button toggle" for="tab-1">登入</label>
         <input id="tab-2" type="radio" name="card">
         <label class="pseudo button toggle" for="tab-2">注册</label>
+        /
+        <input id="tab-3" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-3">更改密码</label>
         <section class="row">
-          <div class="login">
-            <section class="input">
-                <input type="text" title="name" name="name" placeholder="用户名/ID">
-                <input type="password" title="password" name="password" placeholder="密码">
-            </section>
-            <section>
-                <a href="">忘记密码?</a>
-                <button type="submit">登入</button>
-            </section>
+            <!-- 登入 -->
+            <div>
+                <div class="card login">
+                    <header>
+                        登入您的账户
+                    </header>
 
-          </div>
-      
-          <div class="register">
-            
-          </div>
+                    <p>
+                        键入您的账户/ID和密码；或进行<label for="tab-2" class="link">注册</label>。
+                    </p>
+                    <form class="input">
+                        <div class="line">
+                            <label for="login-username">用户名/ID</label>
+                            <input id="login-username" type="text" title="name" name="name"
+                            placeholder="用户名/ID"
+                            autocomplete="username">
+                        </div>
+                        <div class="line">
+                            <label for="login-password">密码</label>
+                            <input id="login-password" type="password" title="password" name="password"
+                                placeholder="密码"
+                                autocomplete="current-password">
+                        </div>
+                    </form>
+                    <footer>
+                        <label for="tab-3" class="pseudo button">忘记密码?</label>
+                        <button id="submit-login" type="submit">登入</button>
+                    </footer>
+
+                </div>
+            </div>
+
+            <!-- 注册 -->
+            <div>
+                <div class="card register">
+                    <header>
+                        注册您的账户
+                    </header>
+
+                    <p>
+                        键入您想要创建的账户名、密码。
+                    </p>
+                    <form class="input">
+                        <div class="line">
+                            <label for="register-username">用户名</label>
+                            <input id="register-username" type="text" title="name" name="name" 
+                            placeholder="用户名"
+                            autocomplete="username">
+                        </div>
+                        <div class="line">
+                            <label for="register-password">密码</label>
+                            <input id="register-password" type="password" title="password" name="password"
+                                placeholder="密码"
+                                autocomplete="new-password">
+                        </div>
+                        <div class="line">
+                            <label for="register-rpassword">重复密码</label>
+                            <input id="register-rpassword" type="password" title="password" name="password"
+                                placeholder="重复密码"
+                                autocomplete="new-password">
+                        </div>
+                    </form>
+                    <footer>
+                        <label for="tab-1" class="pseudo button">已经有账户?</label>
+                        <button id="submit-register" type="submit">注册</button>
+                    </footer>
+
+                </div>
+            </div>
+
+            <!-- 更改密码 -->
+            <div>
+                <div class="card change">
+                    <header>
+                        更改密码
+                    </header>
+
+                    <p>
+                        键入您的账户/ID和更改后密码。
+                    </p>
+                    <form class="input">
+                        <div class="line">
+                            <label for="change-username">用户名/ID</label>
+                            <input id="change-username" type="text" title="name" name="name" 
+                            placeholder="用户名/ID"
+                            autocomplete="username">
+                        </div>
+                        <div class="line">
+                            <label for="change-password">更改后密码</label>
+                            <input id="change-password" type="password" title="password" name="password"
+                                placeholder="密码"
+                                autocomplete="new-password">
+                        </div>
+                    </form>
+                    <footer>
+                        <label for="tab-1" class="pseudo button">尝试登入</label>
+                        <button id="submit-change" type="submit" disabled>更改</button>
+                    </footer>
+                </div>
         </section>
-      </section>
+    </section>
 
 
     <!-- 消息框 -->
