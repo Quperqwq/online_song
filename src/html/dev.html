@@ -23,6 +23,12 @@
     
     "> AddSong </button>
 
+    <button
+    onclick="
+    document.cookie = 'login_token=;'
+    "
+    >清除登入</button>
+
     <h3>login user</h3>
     <pre style="margin-top: 0;">{{ user_data }}</pre>
 

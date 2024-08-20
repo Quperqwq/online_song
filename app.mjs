@@ -32,7 +32,7 @@ const config = {
     /**(Player)默认封面地址 */
     normal_cover_url: '/src/image/normal_cover.webp',
     /**(User)默认头像 */
-    normal_avatar: '/src/image/normal.webp',
+    normal_avatar: '/src/avatar/normal.webp',
     /**(User)登入有效期`秒` */
     login_valid_time: 2678400,
 
@@ -77,7 +77,7 @@ const config = {
     },
 
     /**非登入用户可访问的路由(可使用通配符) */
-    guest_routes: ['/login', '/', '/dev', '/src/*', '/api'],
+    guest_routes: ['/profile', '/', '/dev', '/src/*', '/api'],
 }
 
 /** 控制台字体颜色预设*/
@@ -353,6 +353,21 @@ class App {
         } catch (err) {
             return false
         }
+    }
+    
+    /**
+     * 判断一个值是否有效
+     * @param {any} value 指定值
+     */
+    isValidValue(value) {
+        if (Array.isArray(value)) {
+            if (value.length <= 0) return false
+        }
+        if (this.isObj(value)) {
+            if (Object.keys(value).length <= 0) return false
+        }
+
+        return Boolean(value)
     }
 
     /**
@@ -755,9 +770,20 @@ class App {
      * @param {boolean} [is_meat_data=false] 是否创建meat以传递数据
      */
     returnHTML(file_name, req, res, data = {}, is_meat_data = false) {
+        /**头部元素 */
+        let head_cont = `${this.html_head_cont}\n`
+
+        /**创建网页的meat元素用于传递数据 */
         const createMeatElement = (name, data) => {
             // /(TAG)传递数据的meat元素/ 在这里创建
             return `<meta name="data-${name}" content="${data}">\n`
+        }
+        /**向`head_cont`后添加数据 */
+        const appendMeats = (obj) => {
+            Object.keys(obj).forEach((key) => {
+                const value = obj[key]
+                head_cont += createMeatElement(key, value)
+            })
         }
         // 读取HTML文件内容
         res.set('Content-Type', 'charset=utf-8')
@@ -774,18 +800,20 @@ class App {
 
             res.type('HTML')
 
+            // 来自中间件传输的预传入内容
+            const pre_data = res.locals.pre_data
+            if (pre_data) { // 如果有预传入内容
+                appendMeats(pre_data)
+            }
+
+            // 是否是meat数据
             if (is_meat_data) {
-                let head_cont = `${this.html_head_cont}\n`
-                Object.keys(data).forEach((key) => {
-                    const value = data[key]
-                    head_cont += createMeatElement(key, value)
-                })
+                appendMeats(data)
                 html_cont = this.renderTemplate(html_cont, {
                     '__html_head': head_cont
                 })
-
             } else {
-                data.__html_head = this.html_head_cont
+                data.__html_head = head_cont
                 html_cont = this.renderTemplate(html_cont, data)
             }
             res.send(html_cont) // 进行模板渲染
@@ -1044,7 +1072,6 @@ class User extends Player {
         this.user_file = config.user_file
         /**默认头像 */
         this.normal_avatar = config.normal_avatar
-
 
         /**是否是访客用户 */
         this.is_guest = false
@@ -1339,6 +1366,12 @@ class User extends Player {
             app.debug(app.objToStr(user_data, { title: 'user_data' }))
             this.is_login = true
             this.profile = user_data.profile
+            const user_avatar = this.profile.avatar
+            // (!)判断缺陷
+            if (!app.isValidValue(user_avatar)) { // 若没有头像指定为默认头像
+                this.profile.avatar = this.normal_avatar
+                app.log(this.profile, this.normal_avatar)
+            }
             return ''
         }
 
@@ -1429,13 +1462,13 @@ class User extends Player {
         if (!token) return 'get_token_error'
         const time = app.getTime()
 
-        // 更新用户列表信息
+        // 更新 用户列表 内信息
         const user_role = {// 指定为init的账户给予管理员权限
             'playing': _init ? true : false,
             'order': true,
             'admin': _init ? true : false
         }
-        let user_avatar = avatar ? avatar : this.normal_avatar
+        let user_avatar = avatar ? avatar : null
         const user_data = {
             'profile': {
                 'name': name,
@@ -1489,8 +1522,6 @@ class User extends Player {
         return this.push(song_data, this.profile.name, returns('_func'))
     }
 
-    // (ADD)增加用户的基本修改操作: 修改密码 | 修改头像 ...
-
     /**
      * 更改(新)用户的信息
      * @param {'name' | 'password' | 'avatar' | 'email'} type 更改项目
@@ -1522,7 +1553,9 @@ class User extends Player {
 
             case 'avatar':
                 // 头像
-                // (ADD)更改头像逻辑
+
+                // app.log('"', value, '"')
+                // (IMP)更改头像逻辑
                 this.user_data.profile.avatar = value
                 break
 
@@ -1607,12 +1640,10 @@ httpApp.use(cookieParser()) // 配置Cookie解析中间件
 // 打印访问日志并验证身份
 httpApp.use((req, res, next) => {
     // (i)这里是身份验证的逻辑
-    //    确定当前访问路径是否让访客访问 -> 否, 验证coolie_token -> 否, 返回无权限
-    // (FIX)需要优化验证访问用户的逻辑, 应当符合本项目的`函数式`代码风格
 
     const invalid = (type = 'need_login') => {
         const toURL = app.toUrlStr
-        const url = `/login?from=${toURL(req.path)}&type=${toURL(type)}`
+        const url = `/profile?from=${toURL(req.path)}&type=${toURL(type)}`
         // /(TAG)用户验证失败/
         res.status(403)
         app.returnHTML('4xx.html', req, res, {
@@ -1623,50 +1654,66 @@ httpApp.use((req, res, next) => {
         app.printAccess(req, app.renderColorText('[[red]]403'))
     }
 
-
+    /**是否有当前路由的访问权限 */
     let role = false
-    const path = req.path
-    config.guest_routes.forEach((allow_dir) => { // 验证白名单
-        if (app.matchPath(allow_dir, path)) role = true
-    })
 
-    res.locals.user = GuestUser
-
-    // (IMP)(!)这里的代码逻辑有问题: 如果在访客可访问的URL内则不会进行Token验证, 这就导致了登入用户会看到`GuestUser`身份
-    if (!role) {
-        let _err = ''
-        let token = ''
-
-        try {
-            token = req.cookies['login_token']
-        } catch (err) {
-            return invalid('token_not_found')
-        }
-
-        if (!token) return invalid('token_is_null')
+    const checkUser = (token) => { // 用户验证逻辑
         const user = new User({}) // 尝试实例化user
         _err = user.login(token)
-        if (_err) return invalid(_err)
-
+        if (_err) {
+            role = false
+            return
+        }
+        const user_profile = user.profile
         res.locals.user = user // 验证成功赋值到对象
+        res.locals.pre_data = { // 向网页元素预传入用户信息
+            avatar: user_profile.avatar,
+            name: user_profile.name
+        }
+        role = true
+        return
     }
 
+
+
+
+    let _err = ''
+    let token = ''
+
+    try {
+        token = req.cookies['login_token']
+    } catch (err) {}
+
+    if (token) { // 用户token有效
+        checkUser(token)
+    } 
+    
+    if (!role) { // 用户token无效, 访客账户
+        res.locals.user = GuestUser
+        const path = req.path
+        config.guest_routes.forEach((allow_dir) => { // 验证白名单
+            if (app.matchPath(allow_dir, path)) role = true
+        })
+    }
+
+    if (!role) { // 未在访客账户允许访问的路由内, 返回无权限
+        invalid()
+        return
+    }
+
+    // 打印访问日志
     app.printAccess(req, `${res.locals.user.profile.name}`)
 
     next()
 })
 
-
-// 路由部分
-
-// 主页面
 httpApp.get('/', (req, res) => {
     app.returnHTML('index.html', req, res, { ver: app.version, project_name: app.name })
     res.end()
 })
 
-httpApp.get('/login', (req, res) => {
-    app.returnHTML('login.html', req, res)
+httpApp.get('/profile', (req, res) => {
+    app.returnHTML('profile.html', req, res)
     res.end()
 })
 
@@ -1771,13 +1818,18 @@ httpApp.post('/api', (req, res) => {
     }
     /**
      * 结束这个响应, 向客户端发送res_data
+     * @param {string} [err_message] 返回的错误信息
      * @example
      * res_data.valid = true
      * res_data.message = ''
      * res_data.data = {}
      * return endReq()
      */
-    const endReq = () => {
+    const endReq = (err_message) => {
+        if (err_message) {
+            res_data.message = err_message
+            res_data.valid = false
+        }
         res.send(res_data).end()
     }
 
@@ -1787,9 +1839,7 @@ httpApp.post('/api', (req, res) => {
      */
     const checkErr = (err) => {
         if (!err) return false
-        res_data.valid = false
-        res_data.message = err
-        endReq()
+        endReq(err)
         return true
     }
 
@@ -1799,9 +1849,8 @@ httpApp.post('/api', (req, res) => {
         'add_song': () => {
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
             if (!user) {
-                res_data.message = 'user_not_exist'
                 res_data.valid = false
-                return endReq()
+                return endReq('user_not_exist')
             }
             user.order({
                 'cover': req_data.cover,
@@ -1812,11 +1861,10 @@ httpApp.post('/api', (req, res) => {
                 'lyric': req_data.lyric
             }, (_err) => { // 获取错误信息
                 if (!_err) { // 添加成功
+                    // res_data.valid = true // 特意留在这里了一行注释掉了, 别再手贱多谢这一行! 函数底部有!
                     return endReq()
                 } else { // 添加失败返回错误信息
-                    res_data.valid = false
-                    res_data.message = _err
-                    return endReq()
+                    return endReq(_err)
                 }
             })
 
@@ -1834,7 +1882,7 @@ httpApp.post('/api', (req, res) => {
 
             if (!isNaN(+user_name)) user_id = +user_name
 
-            app.log(user_name, user_id, user_password)
+            // app.log(user_name, user_id, user_password)
             
             const user = new User({ // 尝试实例化User
                 'user_name': user_name,
@@ -1848,6 +1896,26 @@ httpApp.post('/api', (req, res) => {
             const client_token = user.addLogin()
             res_data.valid = true
             res_data.data.token = client_token
+            endReq()
+            return
+        },
+        'change': () => {
+            // 更改用户信息
+            app.logObj(req_data)
+            if (!user.is_login) {
+                endReq('not_login')
+                return
+            }
+            app.log()
+            let _err = ''
+            const type = req_data.target // 更改类型
+            const value = req_data.value // 更改后的内容
+
+            if (!isValid(type, value)) return // 检查参数
+            _err = user.changeData(type, value) // 更改
+            if (checkErr(_err)) return // 检查更改有效性
+            
+            res_data.valid = true
             endReq()
             return
         }

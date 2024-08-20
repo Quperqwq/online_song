@@ -42,24 +42,12 @@
         e_href.href = valid(to_url, '/')
         
         // 倒计时
-        const countDown = () => {
+        app.setCountdown(5, (time) => {
             e_time.innerText = time
-            setTimeout(() => {
-                e_time.innerText = time
-                time -= 1
-                if (time >= 0) {
-                    countDown()
-                    return
-                }
-                over()
-            }, 1000)
-        }
-
-        const over = () => { // 倒计时结束
-            switchURL(to_url)
-        }
-
-        countDown()
+            if (!time) {
+                app.switchURL(to_url)
+            }
+        })
     </script>
 </body>
 </html>

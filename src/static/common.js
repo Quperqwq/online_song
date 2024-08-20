@@ -1,7 +1,19 @@
+// init function
+const valid = (value, normal) => { return value ? value : normal }
+/**
+ * [简](document.getElementById)获取页面的元素
+ * @param {string} id_name 传入ID name
+ */
+const getEBI = (id_name) => {return document.getElementById(id_name)}
+
+
+// definition class
 class App {
     static_url = '/src'
     debug_mode = true
     api_url = '/api'
+    /**是否初始化完成 */
+    is_init = false
     lang_text = {
         'zh-CN': {
             status: {
@@ -24,7 +36,13 @@ class App {
                 'home': '主页',
                 'order': '点歌',
                 player: '播放',
-                login: '登入',
+                profile: '我的',
+            },
+            msg_box: {
+                password_error: '密码错误。',
+                name_not_found: '用户名不存在。',
+                id_not_found: 'ID不存在。',
+                bad_request: '错误的请求。',
             }
         }
     }
@@ -37,8 +55,9 @@ class App {
         // elem_... 表示Element, 在本类中通常表示一个全局Element;
         // elems_... 表示Elements, 在本类中通常表示一个全局Object内是Element
         const _text = this.lang_text[lang]
-        
         this.text = _text ? _text : Object.keys(this.lang_text)[0]
+
+
         this.mod = {
             xhr: new XMLHttpRequest()
         }
@@ -49,15 +68,42 @@ class App {
                 no: () => {}
             }
         }
+        this.init_err_list = []
 
         // init...
         document.addEventListener('DOMContentLoaded', () => {
-            this.initMsgBox()
-            this.initHeader()
+            const appendErr = (err_value) => {
+                if (err_value) this.init_err_list.push(err_value)
+                return
+            }
+            /**服务器指定当前的账户信息 */
+            this.user = {
+                /**用户头像 */
+                avatar: this.getMetaData('avatar'),
+                /**用户名 */
+                name: this.getMetaData('name'),
+            }
+            appendErr(this.initMsgBox())
+            appendErr(this.initHeader())
+            this.is_init = true
+            if (this._initCallback) this._initCallback()
         })
     }
 
+    /**
+     * 监听`App`初始化完成
+     * @param {function(Array.<string> | undefined)} callback 回调函数, 传入初始化时错误信息
+     */
+    listenerInit(callback) {
+        this._initCallback = () => {
+            const err = this.init_err_list
+            callback(err.length ? err : undefined)
+        }
+        return
+    }
 
+
+    // 工具函数-网络相关
     /**
      * 创建一个fetch请求以便使用API
      * @param {string} method 请求方法
@@ -107,6 +153,31 @@ class App {
     useAPI(data, callback) {
         this.makeFetch('POST', this.api_url, data, callback)
     }
+
+
+    // 工具函数-时间相关
+
+    /**
+     * 设置一个倒计时
+     * @param {number} time 倒计时时长
+     * @param {function(number)} callback 每过去一秒触发一次回调函数, 并传入当前计时时间
+     */
+    setCountdown(time, callback) {
+        const timeout = () => {
+            setTimeout(() => {
+                callback(time)
+                time -= 1
+                if (time >= 0) {
+                    timeout()
+                    return
+                }
+            }, 1000)
+        }
+        callback(time)
+        time -= 1
+        timeout()
+    }
+
 
     // 工具函数-路径相关
 
@@ -217,6 +288,42 @@ class App {
         if (!this.debug_mode) window.location.href = url
     }
 
+    /**刷新网页 */
+    reloadPage() {
+        location.reload()
+        return
+    }
+
+    /**
+     * 设置页面cookie
+     * @param {string} key cookie字段
+     * @param {string} value cookie值
+     * @param {number} [max_age] cookie的有效时长(默认为半个月)
+     * @param {string} [path='/'] cookie的路径
+     */
+    setCookie(key, value, max_age = 129600, path = '/') {
+        const toURL = encodeURIComponent
+        const cookie_value = `${toURL(key)}=${toURL(value)};max-age=${max_age};path=${path}`
+        document.cookie = cookie_value
+        console.debug('set cookie:', cookie_value)
+        return
+    }
+
+    /**
+     * 获取字符串查询的对象
+     * @param {string} url 字符串查询内容
+     */
+    getSearchParam(url = window.location.search) {
+        const params = new URLSearchParams(url)
+        return params
+    }
+
+    // 账户相关
+    /**登出用户 */
+    logoutUser() {
+        this.setCookie('login_token', '')
+    }
+
 
 
     // msgBox
@@ -228,8 +335,8 @@ class App {
         if (!element) { // 确保element有效
             element = document.getElementById('msg-box')
         }
-        if (this.elems_msg_box) return false
-        if (!element) return false
+        if (this.elems_msg_box) return 'is_init'
+        if (!element) return 'element_not_exist'
         element.innerHTML = ''
 
         const create = this.createElement
@@ -251,8 +358,7 @@ class App {
                     cancel: create('label', {for: 'msg-enter', class: 'cancel button error'}, '否'),
                     success: create('label', {for: 'msg-enter', class: 'button success'}, '是')
                 }
-            },
-            'wait_title': create('h1')
+            }
         }
         join(_box.root_main.root_footer, _box.root_main.footer)
         join(_box.root_main.head, _box.root_main.root_head)
@@ -280,12 +386,11 @@ class App {
             content: _box.root_main.cont,
             button_no: _box.root_main.footer.cancel,
             button_yes: _box.root_main.footer.success,
-            checkbox: _box.checkbox,
-            wait_title: _box.wait_title
+            checkbox: _box.checkbox
         }
         
-        console.log('msg box init ok.')
-        return true
+        console.debug('msg box init ok.')
+        return ''
     }
 
     /**
@@ -325,15 +430,17 @@ class App {
      * 打开一个 消息框 | 确认框
      * @param {string} title 标题
      * @param {string} content 内容
+     * @param {'info' | 'warn' | 'error'} [type='info'] 提示类型,显示在标题的字体图标上
      * @param {string} [is_msg] 是否是消息框,若否则认定为确认框
      * @param {function(boolean)=} [callback] 回调函数, 返回用户确认信息
      */
-    msgBox(title, content, is_msg = true, callback) {
+    msgBox(title, content, type = 'info', is_msg = true, callback) {
         if (!this.validMsgBox()) return
         const es = this.elems_msg_box
 
         this.lockMsgBoxButton(false)
         es.checkbox.checked = true
+        es.title.className = `icon-${type}`
 
         if (is_msg) { // message样式
             es.root.setAttribute('data-style', 'message')
@@ -355,16 +462,22 @@ class App {
      * 显示一个等待框
      * @param {boolean} is_wait 是否显示等待框
      * @param {string} [title] 等待时显示的标题
+     * 
+     * @returns {Element | undefined} 返回等待框内容的Element
      */
     waitBox(is_wait, title) {
         if (!this.elems_msg_box) return console.error('message box not init.')
         const es = this.elems_msg_box
-        if (is_wait) es.root.setAttribute('data-style', 'wait')
+        es.title.className = 'icon-spinner'
+        if (is_wait) {
+            es.title.innerText = '请稍等'
+            es.root.setAttribute('data-style', 'wait')
+        }
 
         es.checkbox.checked = is_wait
         this.lockMsgBox(is_wait)
-        if (title) es.wait_title.innerText = title
-        return
+        if (title) es.content.innerText = title
+        return es.content
     }
 
 
@@ -375,8 +488,8 @@ class App {
      */
     initHeader(element, title = 'OnlineSong') {
         if (!element) element = document.getElementById('page-nav')
-        if (this.elems_header) return false
-        if (!element) return false
+        if (this.elems_header) return 'is_init'
+        if (!element) return 'element_not_exist'
         element.innerHTML = ''
 
         const create = this.createElement
@@ -384,23 +497,37 @@ class App {
         const text = (type, key) => this.getText(type, key)
         const src = this.src_url
 
+        const user_avatar = this.user.avatar
+        const user_name = this.user.name
+
+        const e_logo = create('img', {
+            class: user_avatar ? 'avatar' : 'logo',
+            alt: user_avatar ? 'user avatar' : 'logo',
+            src: valid(user_avatar, src.png_logo),
+        })
+        const e_title = create('span', {
+            class: user_name ? 'username' : 'title',
+        }, valid(user_name, title))
+
         const menu = [
+            create('div', {href: '/', class: 'button logo'}, title),
             create('a', {href: '/', class: 'pseudo button icon-home'}, text('page_name', 'home')),
-            create('a', {href: '/login', class: 'pseudo button icon-login'}, text('page_name', 'login')),
+            create('a', {href: '/profile', class: 'pseudo button icon-user'}, text('page_name', 'profile')),
             create('a', {href: '/order', class: 'pseudo button icon-order'}, text('page_name', 'order')),
             create('a', {href: '/player', class: 'pseudo button icon-player'}, text('page_name', 'player')),
         ]
         const header = {
             'brand': create('section', {'class': 'brand'}),
             'root_brand': {
-                'logo': create('img', {'class': 'logo', 'src': src.png_logo, 'alt': 'logo'}),
-                'content': create('span', {}, title)
+                'logo': e_logo,
+                'content': e_title
             },
             'checkbox': create('input', {'id': 'menu', 'type': 'checkbox', 'class': 'show'}),
             'expend_button': create('label', {for: 'menu', class: 'burger pseudo button'}, text('module', 'menu')),
             'menu': create('div', {class: 'menu'}),
             'root_menu': menu
         }
+
         join(header.menu, menu)
         join(header.brand, header.root_brand)
         join(element, header)
@@ -412,22 +539,16 @@ class App {
             menu: menu
         }
 
-        console.log('nav init ok.')
-        return true
+        console.debug('nav init ok.')
+        return ''
     }
 }
+
 
 // init object
 
 const app = new App()
 
-// init function
-const valid = (value, normal) => { return value ? value : normal }
-/**
- * [简](document.getElementById)获取页面的元素
- * @param {string} id_name 传入ID name
- */
-const getEBI = (id_name) => {return document.getElementById(id_name)}
 
 // init page...
 const _initPage = () => {

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{ __html_head }}
-    <title> Login </title>
+    <title> Profile & Login </title>
     <style>
         .input {
             width: 70%;
@@ -22,18 +22,40 @@
             margin: 0 1em;
         }
 
+        .tabs .row .card p img {
+            display: block;
+            margin: 0 auto;
+            width: 8em;
+            height: 8em;
+        }
 
         .card footer {
             display: flex;
             justify-content: space-between;
         }
 
-
-
         .tabs {
             text-align: center;
             margin-top: 4em;
         }
+
+        .logout footer,
+        .change-name footer,
+        .change-avatar footer {
+            justify-content: flex-end;
+        }
+
+        input.disabled + label {
+            display: none;
+        }
+/* 
+        .tabs:not([data-style="is-login"]) #tab-4 + label {
+            display: none;
+        } */
+
+        /* :not(section.tabs.is-login) :nth-child(n + (3 * 2)){
+            display: none;
+        } */
 
     </style>
 </head>
@@ -42,14 +64,24 @@
 
     <nav id="page-nav"></nav>
 
-    <section class="tabs three space">
-        <input id="tab-1" type="radio" name="card" checked>
-        <label class="pseudo button toggle" for="tab-1">登入</label>
-        <input id="tab-2" type="radio" name="card">
-        <label class="pseudo button toggle" for="tab-2">注册</label>
-        /
-        <input id="tab-3" type="radio" name="card">
-        <label class="pseudo button toggle" for="tab-3">更改密码</label>
+    <section class="tabs six space">
+        <input id="tab-login" type="radio" name="card" checked>
+        <label class="pseudo button toggle" for="tab-login">登入</label>
+
+        <input id="tab-register" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-register">注册</label>
+        
+        <input id="tab-change-password" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-change-password">更改密码</label>
+
+        <input id="tab-change-name" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-change-name">更改名称</label>
+
+        <input id="tab-change-avatar" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-change-avatar">更改头像</label>
+
+        <input id="tab-logout" type="radio" name="card">
+        <label class="pseudo button toggle" for="tab-logout">登出</label>
         <section class="row">
             <!-- 登入 -->
             <div>
@@ -63,13 +95,13 @@
                     </p>
                     <form class="input">
                         <div class="line">
-                            <label for="login-username">用户名/ID</label>
+                            <label class="icon-user" for="login-username">用户名/ID</label>
                             <input id="login-username" type="text" title="name" name="name"
                             placeholder="用户名/ID"
                             autocomplete="username">
                         </div>
                         <div class="line">
-                            <label for="login-password">密码</label>
+                            <label class="icon-password" for="login-password">密码</label>
                             <input id="login-password" type="password" title="password" name="password"
                                 placeholder="密码"
                                 autocomplete="current-password">
@@ -95,19 +127,19 @@
                     </p>
                     <form class="input">
                         <div class="line">
-                            <label for="register-username">用户名</label>
+                            <label class="icon-user" for="register-username">用户名</label>
                             <input id="register-username" type="text" title="name" name="name" 
                             placeholder="用户名"
                             autocomplete="username">
                         </div>
                         <div class="line">
-                            <label for="register-password">密码</label>
+                            <label class="icon-password" for="register-password">密码</label>
                             <input id="register-password" type="password" title="password" name="password"
                                 placeholder="密码"
                                 autocomplete="new-password">
                         </div>
                         <div class="line">
-                            <label for="register-rpassword">重复密码</label>
+                            <label class="icon-password" for="register-rpassword">重复密码</label>
                             <input id="register-rpassword" type="password" title="password" name="password"
                                 placeholder="重复密码"
                                 autocomplete="new-password">
@@ -123,7 +155,7 @@
 
             <!-- 更改密码 -->
             <div>
-                <div class="card change">
+                <div class="card change-password">
                     <header>
                         更改密码
                     </header>
@@ -133,13 +165,13 @@
                     </p>
                     <form class="input">
                         <div class="line">
-                            <label for="change-username">用户名/ID</label>
+                            <label class="icon-user" for="change-username">用户名/ID</label>
                             <input id="change-username" type="text" title="name" name="name" 
                             placeholder="用户名/ID"
                             autocomplete="username">
                         </div>
                         <div class="line">
-                            <label for="change-password">更改后密码</label>
+                            <label class="icon-password" for="change-password">更改后密码</label>
                             <input id="change-password" type="password" title="password" name="password"
                                 placeholder="密码"
                                 autocomplete="new-password">
@@ -147,9 +179,60 @@
                     </form>
                     <footer>
                         <label for="tab-1" class="pseudo button">尝试登入</label>
-                        <button id="submit-change" type="submit" disabled>更改</button>
+                        <button id="submit-password" type="submit" disabled>更改</button>
                     </footer>
                 </div>
+            </div>
+
+            <!-- 更改名称 -->
+            <div>
+                <div class="card change-name">
+                    <header>
+                        更改一个新的名称
+                    </header>
+                    <form>
+                        <input id="new-name" type="text" title="new name">
+                    </form>
+                    <footer>
+                        <button id="submit-name">确认更改</button>
+                    </footer>
+                </div>
+            </div>
+
+
+            <!-- 更改头像 -->
+            <div>
+                <div class="card change-avatar">
+                    <header>
+                        更改一个新的头像
+                    </header>
+                    <p>
+                        <img id="new-avatar-preview" src="" alt="">
+                    </p>
+                    <div class="line">
+                        <input id="new-avatar" type="file" title="new avatar" accept=".jpg, .jpeg, .png, .webp">
+                    </div>
+                    <footer>
+                        <button id="submit-avatar">确认更改</button>
+                    </footer>
+                </div>
+            </div>
+
+
+            <!-- 登出 -->
+            <div>
+                <div class="card logout">
+                    <header>
+                        登出账户
+                    </header>
+                    <p>
+                        注销您的登入。
+                    </p>
+                    <footer>
+                        <button id="submit-logout">登出</button>
+                    </footer>
+                </div>
+            </div>
         </section>
     </section>
 
@@ -161,7 +244,7 @@
     <section class="modal" data-style="confirm" id="msg-box"> </section>
 
     <script src="/src/page-login.js"></script>
-    <!-- 这里需要处理来自 app.mjs/(TAG)用户验证失败/ 的URL查询参数type和from -->
+    <!--/(TAG)用户验证失败/ -->
 </body>
 
 </html>

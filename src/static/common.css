@@ -15,6 +15,10 @@ p {
     text-indent: 2em;
 }
 
+body {
+    padding-top: 3em;
+}
+
 
 .link {
     color: steelblue;
@@ -37,8 +41,13 @@ p {
 /* 消息盒|确认窗口 */
 #msg-box h1 {
     text-align: center;
-    padding: 0 1em;
+    /* padding: 0 1em; */
 }
+
+#msg-box article {
+    min-width: 10em;
+}
+
 
 #msg-box article footer {
     display: flex;
@@ -50,39 +59,95 @@ p {
     opacity: 0;
 }
 
+#msg-box[data-style="message"] article footer .success {
+    background-color: #0074d9;
+}
+
 #msg-box[data-style="confirm"] article header .close,
-#msg-box:not([data-style="wait"]) h1,
-#msg-box[data-style="wait"] article {
-    pointer-events: none;
-    opacity: 0;
+#msg-box[data-style="wait"] article header .close,
+#msg-box[data-style="wait"] article footer {
+    /* pointer-events: none;
+    opacity: 0; */
+    display: none;
+}
+
+#msg-box[data-style="wait"] article header,
+#msg-box[data-style="wait"] article header h3 {
+    text-align: center;
+    margin: 0;
+}
+
+#msg-box[data-style="wait"] article .content {
+    padding: .8em 1em;
+    text-align: center;
+}
+
+#msg-box[data-style="wait"] .overlay {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
 }
 
 
 /* 导航栏 */
-nav .menu * {
+
+
+nav#page-nav .menu * {
     display: inline-block;
 }
 
+nav#page-nav .menu .logo {
+    display: none;
+}
+
+/* 移动端样式 */
+@media (max-width: 60em) {
+    nav#page-nav .menu .logo {
+        display: block;
+        text-align: center;
+        font-weight: 800;
+    }
+    nav#page-nav .menu * {
+        display: block;
+    }
+}
+
+nav#page-nav .brand .avatar {
+    border-radius: 0.2em;
+    width: 2em;
+    height: 2em;
+    margin-right: .4em;
+}
+
+/* 设置字体图标before样式 */
+
 [class*="icon-"]::before {
     font-family: 'icomoon';
+    padding-top: .3em;
 }
+.icon-menu::before { content: '\e9bd';}
+.icon-home::before {content: '\e900';}
+.icon-order::before {content: '\ea0a';}
+.icon-player::before {content: '\ea15';}
+.icon-user::before,.icon-login::before {content: '\e971';}
+.icon-password::before {content: '\e98d';}
+.icon-error::before {content: '\ea0f';color: red;}
+.icon-info::before {content: '\ea0c';color: deepskyblue;}
+.icon-warn::before {content: '\ea08';color: orange;}
+.icon-spinner::before {content: '\e984';display: inline-block;padding: 0;transform-origin: 50% 47%;animation: rotation 1.2s ease-out infinite;}
+.icon-notification::before {content: '\ea08'; color: orange;}
+.icon-question::before {content: '\ea09'; color: orange;}
 
-.icon-menu::before {
-    content: '\e9bd';
-}
 
-.icon-home::before {
-    content: '\e900';
-}
 
-.icon-login::before {
-    content: '\e971';
-}
 
-.icon-order::before {
-    content: '\ea0a';
-}
+/* 动画 */
 
-.icon-player::before {
-    content: '\ea15';
+/* 旋转动画 */
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
