@@ -43,6 +43,14 @@ class App {
                 name_not_found: '用户名不存在。',
                 id_not_found: 'ID不存在。',
                 bad_request: '错误的请求。',
+                please_select_file: '请选择文件。',
+                not_support_file: '不支持的文件类型。',
+                logging: '登入中...',
+                confirm_logout: '确定登出吗？',
+
+                // title
+                login_fail: '登入失败',
+                confirm: '确定',
             }
         }
     }
@@ -152,6 +160,22 @@ class App {
      */
     useAPI(data, callback) {
         this.makeFetch('POST', this.api_url, data, callback)
+    }
+
+    /**
+     * (useAPI)调用API更改用户信息
+     * @param {string} target 更改目标
+     * @param {any} value 更改值
+     * @param {function(object)} callback 回调函数
+     */
+    makeChange(target, value, callback) {
+        this.useAPI({
+            'type': 'change',
+            'target': target,
+            value: value
+        }, (res_data) => {
+            callback(res_data)
+        })
     }
 
 
@@ -459,6 +483,14 @@ class App {
     }
 
     /**
+     * (msgBox)打开一个错误框
+     * @param {string} content 传入内容
+     */
+    errorBox(content) {
+        this.msgBox('错误', content, 'error')
+    }
+
+    /**
      * 显示一个等待框
      * @param {boolean} is_wait 是否显示等待框
      * @param {string} [title] 等待时显示的标题
@@ -546,8 +578,12 @@ class App {
 
 
 // init object
-
 const app = new App()
+
+// init ref
+const text = (type, key) => app.getText(type, key)
+const msgBoxText = key => text('msg_box', key)
+const log = console.log
 
 
 // init page...

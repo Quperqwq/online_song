@@ -1,13 +1,16 @@
 // /(TAG)登入API方法/
 const param_obj = app.getSearchParam()
 
+// page
 const param = {
     'from': valid(param_obj.get('from'), '/'),
     'type': valid(param_obj.get('type'), 'need_login')
 }
+
+// ref
 const disabled = app.disabledElement
 
-
+// get
 const es_main = {
     'login': {
         check: getEBI('tab-login'),
@@ -53,30 +56,54 @@ const es_main = {
     },
 }
 
+/**@param {File} file @param {function(ArrayBuffer | string) callback} @param {function} err_callback */
+const readFile = (file, callback, is_buffer = false, have_box = true, err_callback) => {
+    const box = (str) => {
+        if (have_box) app.errorBox(msgBoxText(str))
+        if (typeof err_callback === 'function') err_callback()
+    }
+    const type_reg = /^image\//
+
+    if (!file) { return box('please_select_file') }
+    if (!type_reg.test(file.type)) { return box('not_support_file') }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+        callback(event.target.result)
+    }
+    is_buffer ? reader.readAsArrayBuffer(file) : reader.readAsDataURL(file)
+}
 
 app.listenerInit((err) => {
+    // ref
     const es_change = es_main.change
+    const es_c_avatar = es_change.avatar
+    const es_c_name = es_change.name
+    const es_c_password = es_change.password
     if (err) console.error(err)
     if (app.user.name) {
         disabled(es_main.login.check, true)
         disabled(es_main.register.check, true)
         es_main.logout.check.checked = true
 
-        es_change.avatar.preview.src = app.user.avatar
+        es_c_avatar.preview.src = app.user.avatar
     } else {
         disabled(es_main.logout.check, true)
-        disabled(es_change.name.check, true)
-        disabled(es_change.avatar.check, true)
+        disabled(es_c_name.check, true)
+        disabled(es_c_avatar.check, true)
     }
 
 
+    // listen event...
 
+    
+    // login
     es_main.login.submit.addEventListener('click', () => {
         const es = es_main.login
         const name = es.name.value
         const password = es.password.value
         
-        app.waitBox(true, '正在登入...')
+        app.waitBox(true, msgBoxText('logging'))
         app.useAPI({
             'type': 'login',
             'name': name,
@@ -84,11 +111,11 @@ app.listenerInit((err) => {
         }, (res_data) => {
             app.waitBox(false)
             if (!res_data) {
-                app.msgBox('登入失败', 'bad_request', 'error')
+                app.msgBox(msgBoxText('login_fail'), msgBoxText('bad_request'), 'error')
                 return
             }
             if (!res_data.valid) {
-                app.msgBox('登入失败', app.getText('msg_box', res_data.message), 'error')
+                app.msgBox(msgBoxText('login_fail'), msgBoxText(res_data.message), 'error')
                 return
             }
             const login_token = res_data.data.token
@@ -107,46 +134,52 @@ app.listenerInit((err) => {
         })
     })
     
+    // register
     es_main.register.submit.addEventListener('click', () => {
     
     })
 
-    es_change.password.submit.addEventListener('click', () => {
+    // change password
+    es_c_password.submit.addEventListener('click', () => {
     
     })
     
+    // logout
     es_main.logout.submit.addEventListener('click', () => {
-        app.msgBox('确认', '确定要登出吗？', 'question', false, (confirm) => {
+        app.msgBox(msgBoxText('confirm'), msgBoxText('confirm_logout'), 'question', false, (confirm) => {
             if (!confirm) return
             app.logoutUser()
             app.reloadPage()
         })
     })
 
-    es_change.avatar.input.addEventListener('change', () => {
-        const e_preview = es_change.avatar.preview
-        const e_input = es_change.avatar.input
+    // change avatar - preview
+    es_c_avatar.input.addEventListener('change', () => {
+        const e_preview = es_c_avatar.preview
+        const e_input = es_c_avatar.input
         const file = e_input.files[0]
-        console.debug('create preview')
-        if (file) {
-            const reader = new FileReader()
-            reader.onload = (event) => {
-                e_preview.src = event.target.result
-            }
-            reader.readAsDataURL(file)
-        }
+        readFile(file, (src) => {
+            e_preview.src = src
+        }, false, true, () => {
+            e_preview.src = app.user.avatar
+        })
     })
 
-    es_change.avatar.submit.addEventListener('click', () => {
-        const e_input = es_change.avatar.input
+    // change avatar - submit
+    es_c_avatar.submit.addEventListener('click', () => {
+        const e_input = es_c_avatar.input
         /**@type {File} */
         const file = e_input.files[0]
-        const type_reg = /^image\//
-        if (!type_reg.test(file.type)) {
-            app.msgBox('错误', '不支持的文件类型', 'warn')
-        }
-        app.useAPI({'type': 'change', 'target': 'avatar', 'value': file}, (value) => {
-            console.log(value)
-        })
+        readFile(file, (data) => {
+            log(data)
+        }, true)
+        // app.makeChange('avatar', file, (res_data) => {
+
+        // })
+    })
+
+    // change name
+    es_c_name.submit.addEventListener('click', () => {
+
     })
 })
