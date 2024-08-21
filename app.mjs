@@ -1589,6 +1589,9 @@ export class User extends Player {
                 // 头像
                 // 字符串头
                 const base64_head = 'data:image/png;base64,'
+                // (FIX)需要支持更多数据类型 如data:image/jpeg;base64,
+                //   请更改为case data:image/
+                //   后续根据后面的内容更改文件扩展名
 
 
                 if (value.startsWith(base64_head)) { // 传入的数据是base64格式, 保存为用户头像文件
@@ -1601,7 +1604,6 @@ export class User extends Player {
                     value = app.getStaticURL(`avatar/${filename}`) // 最终的头像内容是静态文件头像的URL
                 }
                 
-                // (IMP)更改头像逻辑
                 this.user_data.profile.avatar = value
                 break
 
