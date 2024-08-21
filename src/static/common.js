@@ -47,10 +47,21 @@ class App {
                 not_support_file: '不支持的文件类型。',
                 logging: '登入中...',
                 confirm_logout: '确定登出吗？',
+                change_avatar_finish: '更改头像成功。',
+                change_name_finish: '更改名称成功。',
+                input_is_null: '输入内容为空。',
 
                 // title
                 login_fail: '登入失败',
                 confirm: '确定',
+                finish: '完成',
+                error: '错误',
+            },
+            server: {
+                name_too_short: '名称过短。',
+                name_too_long: '名称过长。',
+                all_number: '不允许全部使用数字。',
+                name_have_special_char: '不允许包含特殊字符。',
             }
         }
     }
@@ -90,9 +101,18 @@ class App {
                 avatar: this.getMetaData('avatar'),
                 /**用户名 */
                 name: this.getMetaData('name'),
+                /**网页头部显示用户信息的元素 */
+                element: {
+                    /**@type {null | Element} */
+                    avatar: null,
+                    /**@type {null | Element} */
+                    name: null,
+                }
             }
             appendErr(this.initMsgBox())
             appendErr(this.initHeader())
+            this.user.element.avatar = this.elems_header.logo
+            this.user.element.name = this.elems_header.title
             this.is_init = true
             if (this._initCallback) this._initCallback()
         })
@@ -486,9 +506,8 @@ class App {
      * (msgBox)打开一个错误框
      * @param {string} content 传入内容
      */
-    errorBox(content) {
-        this.msgBox('错误', content, 'error')
-    }
+    errorBox(content) { this.msgBox(text('msg_box', 'error'), content, 'error') }
+    finishBox(content) { this.msgBox(text('msg_box', 'finish'), content, 'info') }
 
     /**
      * 显示一个等待框
@@ -583,6 +602,7 @@ const app = new App()
 // init ref
 const text = (type, key) => app.getText(type, key)
 const msgBoxText = key => text('msg_box', key)
+const serverText = key => text('server', key)
 const log = console.log
 
 

@@ -20,6 +20,8 @@ const config = {
     lang: 'zh-CN',
     /**静态文件路径 */
     static_path: './src/static',
+    /**用户头像存放路径 */
+    user_avatar_path: './src/static/avatar',
     /**(APP)HTML路径 */
     html_path: './src/html',
     /**(APP)语言模板文件路径 */
@@ -35,6 +37,8 @@ const config = {
     normal_avatar: '/src/avatar/normal.webp',
     /**(User)登入有效期`秒` */
     login_valid_time: 2678400,
+    /**允许请求内容最大的大小 */
+    req_max_size: '2mb',
 
     /**(Player)是否为本地模式 */
     local_music_mode: true,
@@ -78,6 +82,9 @@ const config = {
 
     /**非登入用户可访问的路由(可使用通配符) */
     guest_routes: ['/profile', '/', '/dev', '/src/*', '/api'],
+
+    /**最大打印POST访问信息的字符串长度 */
+    print_access_max_length: 100,
 }
 
 /** 控制台字体颜色预设*/
@@ -372,11 +379,18 @@ class App {
 
     /**
      * 格式化一个路径
-     * @param {string} path 需要格式化的路径
+     * @param {string | Array.<string>} path 需要格式化的路径
      * @param {boolean} _array 是否需要返回数组
      */
     formatPath(path, _array = false) {
         if (!path) return _array ? [] : ''
+        if (Array.isArray(path)) {
+            let new_path = ''
+            path.forEach((path_item) => {
+                new_path += `/${path_item}`
+            })
+            path = new_path
+        }
         let dir_list = path.split(/[//|\\]/g)
         /**@type {string[]} */
         let path_list = []
@@ -506,7 +520,7 @@ class App {
     /**
      * 写入文件(内置模块功能封装)
      * @param {string} file_name 传入文件名
-     * @param {string} data 需要写入的内容
+     * @param {string | Buffer} data 需要写入的内容
      * @param {function | undefined} callback 回调函数
      * @returns {boolean} 是否写入成功
      */
@@ -664,13 +678,21 @@ class App {
     }
 
     /**
-     * 获取静态文件的路径
-     * @param {string} rel_path 
-     * @returns {string|undefined} 如果是合法的文件则返回文件绝对路径,否则返回undefined
+     * 获取静态文件的路由
+     * @param {string} path 文件在静态路由内的路径
+     * @returns {string} 
      */
-    getFilePath(rel_path) {
-        const abs_path = path.join(config.static_path, rel_path) // 获取绝对路径
-        return (!(this.getFileStat(abs_path).isFile())) ? abs_path : void 0
+    getStaticURL(path) {
+        const arr_path = this.formatPath([config.static_url, path], true)
+        return `/${arr_path.join('/')}`
+    }
+
+    /**
+     * 获取用户头像的绝对路径
+     * @param {string} filename 用户头像的文件名
+     */
+    getUserAvatarPath(filename) {
+        return path.join(__dirname, config.user_avatar_path, filename)
     }
 
     /**
@@ -833,7 +855,11 @@ class App {
         const new_line = '\n        '
         let more_info = ''
         if (req.method === 'POST') {
+            const max_len = config.print_access_max_length
             more_info = '| data: ' + new_line + (this.isObj(req.body) ? JSON.stringify(req.body) : req.body)
+            if (more_info.length >= max_len) {
+                more_info = more_info.slice(0, max_len) + '...'
+            }
         }
 
         let message = ''
@@ -1137,7 +1163,7 @@ class User extends Player {
         }
         return this.all_data.login
     }
-
+    
     /**
      * (all_user)获取用户数据
      * @returns {UserData} 
@@ -1247,10 +1273,16 @@ class User extends Player {
         switch (type) {
             case 'name':
                 // /(TAG)校验用户名/
+                if (reg.special.test(value)) return 'name_have_special_char'
                 if (value.length < 4) return 'name_too_short'
                 if (value.length > 12) return 'name_too_long'
-                if (reg.special.test(value)) return 'name_have_special_char'
                 if (reg.all_number.test(value)) return 'all_number'
+
+                let is_rep = false
+                this.forEachUser((user_data) => {
+                    if (user_data.profile.name === value) is_rep = true
+                })
+                if (is_rep) return 'is_repeat'
                 break
             case 'password':
                 // /(TAG)校验密码/
@@ -1362,7 +1394,7 @@ class User extends Player {
 
         if (this.is_login) return 'is_login'
         const finish = (method = 'login') => { // 校验成功
-            app.info('user_login', method)
+            app.debug(app.text('user_login', method))
             app.debug(app.objToStr(user_data, { title: 'user_data' }))
             this.is_login = true
             this.profile = user_data.profile
@@ -1370,7 +1402,6 @@ class User extends Player {
             // (!)判断缺陷
             if (!app.isValidValue(user_avatar)) { // 若没有头像指定为默认头像
                 this.profile.avatar = this.normal_avatar
-                app.log(this.profile, this.normal_avatar)
             }
             return ''
         }
@@ -1529,6 +1560,7 @@ class User extends Player {
      */
     changeData(type, value) {
         if (!this.is_login) return 'not_login'
+        if (typeof value !== 'string') return 'invalid_type'
         const uid = this.user_profile.id
         const salt = this.user_verify.salt
         let _err = ''
@@ -1553,8 +1585,19 @@ class User extends Player {
 
             case 'avatar':
                 // 头像
+                // 字符串头
+                const base64Head = 'data:image/png;base64,'
 
-                // app.log('"', value, '"')
+
+                if (value.startsWith(base64Head)) { // 传入的数据是base64格式, 保存为用户头像文件
+                    const filename = `${this.profile.id}.jpg`
+                    const data = value.replace(base64Head, '')
+                    const buffer = Buffer.from(data, 'base64')
+                    const valid = app.writeFile(app.getUserAvatarPath(filename), buffer)
+                    if (!valid) return 'save_file_error'
+                    value = app.getStaticURL(`avatar/${filename}`) // 最终的头像内容是静态文件头像的URL
+                }
+                
                 // (IMP)更改头像逻辑
                 this.user_data.profile.avatar = value
                 break
@@ -1599,7 +1642,7 @@ app.version = 'dev-202408_20'
 
 
 
-// 接受来自命令函的传参
+// 接受来自命令行的传参
 const args = process.argv
 
 // const args = ['--test']
@@ -1634,7 +1677,8 @@ app.debug(app.objToStr(config, { title: app.colorFont('SETTING', 'gray') })) // 
 
 // 中间件部分
 
-httpApp.use(express.json()) // 配置json解析中间件
+httpApp.use(express.json({limit: config.req_max_size})) // 配置json解析中间件
+httpApp.use(express.urlencoded({ limit: config.req_max_size, extended: true })) // 配置表单数据允许的最大值
 httpApp.use(cookieParser()) // 配置Cookie解析中间件
 
 // 打印访问日志并验证身份
@@ -1845,6 +1889,7 @@ httpApp.post('/api', (req, res) => {
 
     /**来自客户端的请求参数 @type {object} */
     const req_data = req.body // 获取请求体
+    // /(TAG)API/
     const param_command = { // 指定对应请求的操作
         'add_song': () => {
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
@@ -1901,19 +1946,24 @@ httpApp.post('/api', (req, res) => {
         },
         'change': () => {
             // 更改用户信息
-            app.logObj(req_data)
             if (!user.is_login) {
                 endReq('not_login')
                 return
             }
-            app.log()
             let _err = ''
             const type = req_data.target // 更改类型
+
             const value = req_data.value // 更改后的内容
 
             if (!isValid(type, value)) return // 检查参数
+
+            
+
             _err = user.changeData(type, value) // 更改
             if (checkErr(_err)) return // 检查更改有效性
+            if (type === 'avatar') { // 如果更改类型是头像 返回头像URL
+                res_data.data.src = user.user_profile.avatar
+            }
             
             res_data.valid = true
             endReq()

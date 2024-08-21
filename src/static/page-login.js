@@ -56,8 +56,10 @@ const es_main = {
     },
 }
 
-/**@param {File} file @param {function(ArrayBuffer | string) callback} @param {function} err_callback */
-const readFile = (file, callback, is_buffer = false, have_box = true, err_callback) => {
+
+/**@param {File} file @param {function(string) callback} @param {function} err_callback */
+
+const readFile = (file, callback, have_box = true, err_callback) => {
     const box = (str) => {
         if (have_box) app.errorBox(msgBoxText(str))
         if (typeof err_callback === 'function') err_callback()
@@ -69,9 +71,11 @@ const readFile = (file, callback, is_buffer = false, have_box = true, err_callba
 
     const reader = new FileReader()
     reader.onload = (event) => {
-        callback(event.target.result)
+        const data = event.target.result
+        callback(data)
     }
-    is_buffer ? reader.readAsArrayBuffer(file) : reader.readAsDataURL(file)
+    
+    reader.readAsDataURL(file)
 }
 
 app.listenerInit((err) => {
@@ -96,7 +100,7 @@ app.listenerInit((err) => {
 
     // listen event...
 
-    
+
     // login
     es_main.login.submit.addEventListener('click', () => {
         const es = es_main.login
@@ -160,7 +164,7 @@ app.listenerInit((err) => {
         const file = e_input.files[0]
         readFile(file, (src) => {
             e_preview.src = src
-        }, false, true, () => {
+        }, true, () => {
             e_preview.src = app.user.avatar
         })
     })
@@ -171,15 +175,29 @@ app.listenerInit((err) => {
         /**@type {File} */
         const file = e_input.files[0]
         readFile(file, (data) => {
-            log(data)
-        }, true)
-        // app.makeChange('avatar', file, (res_data) => {
+            app.makeChange('avatar', data, (res_data) => {
+                const valid = res_data.valid
+                const err = res_data.message
+                const src = res_data.data.src
 
-        // })
+                if (!valid) return app.errorBox(serverText(err))
+                app.finishBox(msgBoxText('change_avatar_finish'))
+                app.user.element.avatar.src = src
+            })
+        }, true)
     })
 
     // change name
     es_c_name.submit.addEventListener('click', () => {
-
+        const new_name = es_c_name.input.value
+        if (!new_name) return app.errorBox(msgBoxText('input_is_null'))
+        app.makeChange('name', new_name, (res_data) => {
+            const valid = res_data.valid
+            const err = res_data.message
+            
+            if (!valid) return app.errorBox(serverText(err))
+            app.finishBox(msgBoxText('change_name_finish'))
+            app.user.element.name.innerText = new_name
+        })
     })
 })
