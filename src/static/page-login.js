@@ -140,7 +140,29 @@ app.listenerInit((err) => {
     
     // register
     es_main.register.submit.addEventListener('click', () => {
-    
+        const es = es_main.register
+        const name = es.name.value
+        const password = es.password.value
+        const rpassword = es.rpassword.value
+        if (!password || !rpassword || !name) return app.errorBox(msgBoxText('please_input'))
+        if (password !== rpassword) return app.errorBox(msgBoxText('password_mismatch'))
+        app.waitBox(true)
+        
+
+        app.useAPI({type: 'register', name: name, password: password}, (res_data) => {
+            app.waitBox(false)
+            if (!res_data) return app.errorBox(msgBoxText('bad_request'))
+            const {valid, message} = res_data
+            if (!valid) return app.errorBox(serverText(message))
+            
+            const es_login = es_main.login
+            es_login.name.value = name
+            es_login.password.value = password
+            es_login.check.checked = true
+            
+            app.finishBox(msgBoxText('register_user_finish'))
+
+        })
     })
 
     // change password
@@ -150,7 +172,7 @@ app.listenerInit((err) => {
     
     // logout
     es_main.logout.submit.addEventListener('click', () => {
-        app.msgBox(msgBoxText('confirm'), msgBoxText('confirm_logout'), 'question', false, (confirm) => {
+        app.confirmBox(msgBoxText('confirm_logout'), (confirm) => {
             if (!confirm) return
             app.logoutUser()
             app.reloadPage()
@@ -176,6 +198,7 @@ app.listenerInit((err) => {
         const file = e_input.files[0]
         readFile(file, (data) => {
             app.makeChange('avatar', data, (res_data) => {
+                if (!res_data) return app.errorBox(msgBoxText('bad_request'))
                 const valid = res_data.valid
                 const err = res_data.message
                 const src = res_data.data.src

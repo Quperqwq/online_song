@@ -1,20 +1,21 @@
 // 导入模块
+import express from 'express' // express框架
 import fs from 'fs' // 文件系统
 import path from 'path' // 路径
 
 import fetch from 'node-fetch' // fetch网络API
 import mime from 'mime' // 文件mime类型
 import crypto from 'crypto'
+import cookieParser from 'cookie-parser'
 
+const httpApp = express()
 
 // 初始化常量
 const __dirname = process.cwd()
 const __salt = '3d93bbd10a66ea6ad85bc39434c5f677' // 定义特征值用于对token生成的唯一性
 
-
-
 // 初始化配置
-export const config = {
+const config = {
     /**设置显示语言 */
     lang: 'zh-CN',
     /**静态文件路径 */
@@ -85,9 +86,6 @@ export const config = {
     /**最大打印POST访问信息的字符串长度 */
     print_access_max_length: 100,
 }
-
-
-
 
 /** 控制台字体颜色预设*/
 const colors = {
@@ -1032,7 +1030,7 @@ class Player {
 }
 
 
-export class User extends Player {
+class User extends Player {
     /**登入有效时间 */
     login_valid_time = config.login_valid_time
     /**
@@ -1636,8 +1634,461 @@ const _init_config = () => {
 _init_config()
 
 // 初始化对象
-export const app = new App()
-export const player = new Player()
+const app = new App()
+const player = new Player()
+const GuestUser = new User({ 'is_guest': true })
 // 初始化版本信息
-app.version = 'dev-202408_22/new'
+app.version = 'dev-202408_20'
+
+
+
+
+// 接受来自命令行的传参
+const args = process.argv
+
+// const args = ['--test']
+
+// 处理传入参数
+args.forEach((key, index) => {
+    if (!(key.slice(0, 2) === '--')) return // 不是有效参数名时进入下一个循环
+    // 获取到参数与参数值
+    const param = key.slice(2)
+    const value = args[index + 1]
+
+    // 执行对应指令
+    const command = app.param_command[param]
+    if (!command) app.onError(app.text('consol_invalid_param', key)) // 如果没有对应的处理方式则抛出错误
+    command(value) // 执行
+    app.debug(app.text('consol_args_command_finish', command))
+})
+
+// 输出基本信息
+app.log(app.colorFont(' QUPR ', 'white', 'green'), app.colorFont(' ONLINE-SONG ', 'white', 'cyan'), app.colorFont(app.version, 'yellow')) // 版本号与项目名称
+app.debug(app.objToStr(config, { title: app.colorFont('SETTING', 'gray') })) // 配置信息
+
+
+
+
+
+
+// 初始化http服务器
+
+
+
+
+// 中间件部分
+
+httpApp.use(express.json({limit: config.req_max_size})) // 配置json解析中间件
+httpApp.use(express.urlencoded({ limit: config.req_max_size, extended: true })) // 配置表单数据允许的最大值
+httpApp.use(cookieParser()) // 配置Cookie解析中间件
+
+// 打印访问日志并验证身份
+httpApp.use((req, res, next) => {
+    // (i)这里是身份验证的逻辑
+
+    const invalid = (type = 'need_login') => {
+        const toURL = app.toUrlStr
+        const url = `/profile?from=${toURL(req.path)}&type=${toURL(type)}`
+        // /(TAG)用户验证失败/
+        res.status(403)
+        app.returnHTML('4xx.html', req, res, {
+            'status': 403,
+            'type': type,
+            'to': url
+        }, true)
+        app.printAccess(req, app.renderColorText('[[red]]403'))
+    }
+
+    /**是否有当前路由的访问权限 */
+    let role = false
+
+    const checkUser = (token) => { // 用户验证逻辑
+        const user = new User({}) // 尝试实例化user
+        _err = user.login(token)
+        if (_err) {
+            role = false
+            return
+        }
+        const user_profile = user.profile
+        res.locals.user = user // 验证成功赋值到对象
+        res.locals.pre_data = { // 向网页元素预传入用户信息
+            avatar: user_profile.avatar,
+            name: user_profile.name
+        }
+        role = true
+        return
+    }
+
+
+
+
+    let _err = ''
+    let token = ''
+
+    try {
+        token = req.cookies['login_token']
+    } catch (err) {}
+
+    if (token) { // 用户token有效
+        checkUser(token)
+    } 
+    
+    if (!role) { // 用户token无效, 访客账户
+        res.locals.user = GuestUser
+        const path = req.path
+        config.guest_routes.forEach((allow_dir) => { // 验证白名单
+            if (app.matchPath(allow_dir, path)) role = true
+        })
+    }
+
+    if (!role) { // 未在访客账户允许访问的路由内, 返回无权限
+        invalid()
+        return
+    }
+
+    // 打印访问日志
+    app.printAccess(req, `${res.locals.user.profile.name}`)
+
+    next()
+})
+
+httpApp.get('/', (req, res) => {
+    app.returnHTML('index.html', req, res, { ver: app.version, project_name: app.name })
+    res.end()
+})
+
+httpApp.get('/profile', (req, res) => {
+    app.returnHTML('profile.html', req, res)
+    res.end()
+})
+
+// 播放页面
+httpApp.get('/player', (req, res) => {
+    const params = req.params
+
+    app.returnHTML('player.html', req, res)
+    res.end()
+})
+
+// 点歌页面
+httpApp.get('/order', (req, res) => {
+
+    app.returnHTML('order.html', req, res)
+    res.end()
+})
+
+// 不存在页面
+// httpApp.get('/not_found', (req, res) => {
+//     app.returnHTML('4xx.html', req, res, {
+//         status: 404,
+//         type: 'not_found',
+//         from: req.path
+//     })
+//     res.end()
+// })
+
+// 调试页面
+httpApp.get('/dev', (req, res) => {
+    app.returnHTML('dev.html', req, res, {
+        'user_data': app.objToStr(
+            res.locals.user, {
+            no_color: true,
+            title: res.locals.user.profile.name
+        }
+        )
+    })
+    res.end()
+})
+
+// 本地音乐
+httpApp.get(`/${config.local_music_url}/*`, (req, res) => {
+    const file_name = req.params[0]
+
+    const music_path = player.getMusicPath(file_name)
+    if (!music_path) {
+        res.status(404).send('file_not_found').end()
+        return
+    }
+    res.set('Content-Type', 'audio/mpeg')
+    res.set('Content-Disposition', 'inline')
+    // (!) 特别注意: 这里容易意外出现"ERR_HTTP_HEADERS_SENT"报错, 原因不明
+    res.sendFile(music_path, (err) => {
+        if (err) {
+            app.error('send_file_error', err)
+            res.status(404).send('bad')
+        }
+    })
+    return
+})
+
+
+// api...
+httpApp.post('/api', (req, res) => {
+    // 初始化
+
+    let res_data = { // 初始化响应值
+        valid: true,
+        message: '',
+        data: {}
+    }
+
+    /**从上一个处理中获得的用户信息 @type {User | undefined} */
+    const user = res.locals.user
+
+    /**
+     * 传入值,若值非有效输出为默认值
+     * @param {any} value 待检测值
+     * @param {any} value 默认值
+     */
+    const valid = (value, normal = '') => { return value ? value : normal }
+    /**
+     * 传入多个值,若值非有效返回错误并结束本次响应并响应错误
+     * @param {...any} value 
+     * 
+     * @returns {boolean} true: 所有参数均有效; false: 有任意一个参数无效且已经响应错误信息,需要return出函数
+     */
+    const isValid = (...value) => {
+        let is_valid = true
+        value.forEach((item) => { // 遍历所有参数
+            if (!item && is_valid) { // 无效参数且没有返回错误信息的情况
+                // app.warn('invalid_request_param', app.objToStr(req_data))
+                res_data.valid = false
+                res_data.message = 'missing_param'
+                endReq()
+
+                is_valid = false
+            }
+        })
+        return is_valid
+    }
+    /**
+     * 结束这个响应, 向客户端发送res_data
+     * @param {string} [err_message] 返回的错误信息
+     * @example
+     * res_data.valid = true
+     * res_data.message = ''
+     * res_data.data = {}
+     * return endReq()
+     */
+    const endReq = (err_message) => {
+        if (err_message) {
+            res_data.message = err_message
+            res_data.valid = false
+        }
+        res.send(res_data).end()
+    }
+
+    /**
+     * 检查是否有错误信息, 若有将结束响应返回错误信息, 函数返回true; 反之false
+     * @param {string} err 错误信息
+     */
+    const checkErr = (err) => {
+        if (!err) return false
+        endReq(err)
+        return true
+    }
+
+    /**来自客户端的请求参数 @type {object} */
+    const req_data = req.body // 获取请求体
+    // /(TAG)API/
+    const param_command = { // 指定对应请求的操作
+        'add_song': () => {
+            if (!isValid(req_data.src, req_data.title)) return // 检查参数
+            if (!user) {
+                res_data.valid = false
+                return endReq('user_not_exist')
+            }
+            user.order({
+                'cover': req_data.cover,
+                'singer': req_data.singer,
+                'src': req_data.src,
+                'time': req_data.time,
+                'title': req_data.title,
+                'lyric': req_data.lyric
+            }, (_err) => { // 获取错误信息
+                if (!_err) { // 添加成功
+                    // res_data.valid = true // 特意留在这里了一行注释掉了, 别再手贱多谢这一行! 函数底部有!
+                    return endReq()
+                } else { // 添加失败返回错误信息
+                    return endReq(_err)
+                }
+            })
+
+        },
+        'login': () => {
+            // /(TAG)登入API方法/
+            let _err = ''
+            /**传入的用户名或ID */
+            let user_name = req_data.name
+            let user_id
+            /**传入的密码 */
+            const user_password = req_data.password
+
+            if (!isValid(user_name, user_password)) return // 检查传参有效性
+
+            if (!isNaN(+user_name)) user_id = +user_name
+
+            // app.log(user_name, user_id, user_password)
+            
+            const user = new User({ // 尝试实例化User
+                'user_name': user_name,
+                'id': user_id,
+                'password': user_password
+            })
+            _err = user.login()
+            if (checkErr(_err)) return // 登入失败
+
+            // 登入成功
+            const client_token = user.addLogin()
+            res_data.valid = true
+            res_data.data.token = client_token
+            endReq()
+            return
+        },
+        'register': () => {
+            // 用户注册方法
+            // (FIX)在传输过程中容易造成密码被窃
+            const {password, name} = req_data
+            if (!isValid(password, name)) return
+            const user = new User({ // 尝试注册用户实例
+                'password': password,
+                'user_name': name
+            })
+            if (checkErr(user.add())) return // 返回错误信息
+
+            // 注册成功
+            res_data.data.token = user.addLogin()
+            res_data.valid = true
+            endReq()
+            return
+        },
+        'change': () => {
+            // 更改用户信息
+            if (!user.is_login) {
+                endReq('not_login')
+                return
+            }
+            let _err = ''
+            const type = req_data.target // 更改类型
+
+            const value = req_data.value // 更改后的内容
+
+            if (!isValid(type, value)) return // 检查参数
+
+            
+
+            _err = user.changeData(type, value) // 更改
+            if (checkErr(_err)) return // 检查更改有效性
+            if (type === 'avatar') { // 如果更改类型是头像 返回头像URL
+                res_data.data.src = user.user_profile.avatar
+            }
+            
+            res_data.valid = true
+            endReq()
+            return
+        }
+    }
+
+    // app.log(req_data, typeof req_data)
+
+
+
+    // 处理
+    let execute // 初始化要执行的函数
+
+    if (typeof req_data === 'object') { // 确定是否是预期内值
+        execute = param_command[req_data.type]
+        if (!((typeof execute) === 'function')) { // 如果不存在此函数则判定为指定type无效
+            // app.debug('没有对应函数')
+            res_data.message = 'unknown_type'
+            res_data.valid = false
+            endReq()
+            return
+        }
+    } else { // 不是预期的值
+        // app.debug('不是预期值')
+        res_data.message = 'unknown_req_type'
+        res_data.valid = false
+        endReq()
+        return
+    }
+
+    execute() // 执行type对应参数的函数
+    return
+})
+
+// test
+httpApp.post('/test', (req, res) => {
+    res.end(JSON.stringify({ test: 'ok' }))
+    app.log(JSON.stringify(req.body))
+    res.end()
+})
+
+httpApp.use(`/${config.static_url}`, express.static(config.static_path)) // 设置静态目录
+
+
+/**路由不存在 */
+httpApp.use((req, res, next) => {
+    res.status(404)
+    app.returnHTML('4xx.html', req, res, {
+        status: 404,
+        type: 'not_found',
+        to: '/'
+    }, true)
+    next()
+})
+
+
+
+httpApp.locals.charset = 'utf-8' // 设置项目编码
+
+// 运行HTTP服务器
+app.info('init_finish')
+if (!app.test_mode) { // 是否是测试模式
+    const server = httpApp.listen(app.prot, app.host, () => {
+        // 初始化服务器
+        const server_host = server.address()
+
+        app.info('server_running', server_host.address, server_host.port)
+    })
+} else {
+    app.info('test_mode_bypass_server')
+    // player.push({
+    //     'src': 'https://music.163.com/song/media/outer/url?id=1311345944',
+    //     'cover': 'https://p3.music.126.net/6y-UleORITEDbvrOLV0Q8A==/5639395138885805.jpg',
+    //     'title': 'ずんだもんの朝食　〜目覚ましずんラップ〜',
+    //     'time': 126.119184, 'singer': 'ひらうみ'
+    // }, 'Quper', (valid) => {
+    //     app.log(valid)
+    // })
+
+
+    // app.downloadFile({'url': 'https://music.163.com/song/media/outer/url?id=1311345944', 'ext_name': 'mp3', 'download_path': './'}, (hash) => {
+    //     app.log(hash)
+    // })
+
+
+    // config.local_music_mode = true
+    // const user = new User({'id': '10002', 'password': '1919810'})
+    const user = new User({'user_name': 'Quper', 'password': '114514'})
+
+    // app.log('add:', user.add())
+    app.log('login:', user.login())
+
+
+    app.log('addLogin:', user.addLogin())
+    setTimeout(() => {
+        app.log('addLogin:', user.addLogin())
+    }, 1485)
+    // app.log('changeData:', user.changeData('password', '1919810'))
+
+    // app.log('order:', user.order({
+    //     'src': 'https://music.163.com/song/media/outer/url?id=1501952920',
+    //     'title': 'test_error'
+    // }, (valid) => {app.log('valid:', valid)}
+    // ))
+
+    // app.logObj(user.all_login_data)
+
+}
 

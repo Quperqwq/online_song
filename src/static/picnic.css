@@ -3312,8 +3312,7 @@ nav .burger {
 
     nav .show~.menu>* {
         transform: translateX(100%);
-        transition: all 0s ease .5s
-    }
+        transition: 283.797ms;}
 
     nav .show:checked~.menu>*:nth-child(1) {
         transition: 232.87ms cubic-bezier(0.645, 0.045, 0.355, 1) -106.852ms;
@@ -3328,7 +3327,7 @@ nav .burger {
     }
 
     nav .show:checked~.menu>*:nth-child(4) {
-        transition: all .5s cubic-bezier(0.645, 0.045, 0.355, 1) .3s
+        transition: all .5s cubic-bezier(0.645, 0.045, 0.355, 1) .3s;
     }
 
     nav .show:checked~.menu>*:nth-child(5) {

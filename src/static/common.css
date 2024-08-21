@@ -89,7 +89,14 @@ body {
 
 
 /* 导航栏 */
+/* nav#page-nav {
+    overflow: hidden;
+} */
 
+nav#page-nav .menu .this {
+    background-color: #dddddd;
+    /* color: #000; */
+}
 
 nav#page-nav .menu * {
     display: inline-block;
@@ -99,6 +106,10 @@ nav#page-nav .menu .logo {
     display: none;
 }
 
+nav#page-nav .menu .search {
+    width: 5em;
+}
+
 /* 移动端样式 */
 @media (max-width: 60em) {
     nav#page-nav .menu .logo {
@@ -106,8 +117,13 @@ nav#page-nav .menu .logo {
         text-align: center;
         font-weight: 800;
     }
+
     nav#page-nav .menu * {
         display: block;
+    }
+
+    nav#page-nav .menu .search {
+        width: 100%;
     }
 }
 
@@ -118,7 +134,7 @@ nav#page-nav .brand .avatar {
     margin-right: .4em;
 }
 
-/* 设置字体图标before样式 */
+/* 设置字体图标before样式/(TAG)字体图标/ */
 
 [class*="icon-"]::before {
     font-family: 'icomoon';
@@ -129,6 +145,7 @@ nav#page-nav .brand .avatar {
 .icon-order::before {content: '\ea0a';}
 .icon-player::before {content: '\ea15';}
 .icon-user::before,.icon-login::before {content: '\e971';}
+.icon-debug::before {content: '\e999';}
 .icon-password::before {content: '\e98d';}
 .icon-error::before {content: '\ea0f';color: red;}
 .icon-info::before {content: '\ea0c';color: deepskyblue;}

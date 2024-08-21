@@ -4,10 +4,10 @@
   "description": "Online song request & Song player",
   "main": "app.js",
   "scripts": {
-    "debug": "node app.mjs --debug",
-    "start": "node app.mjs --start",
-    "test": "node app.mjs --test",
-    "dev": "nodemon --watch app.mjs app.mjs --debug",
+    "debug": "node server.mjs --debug",
+    "start": "node server.mjs --start",
+    "test": "node server.mjs --test",
+    "dev": "nodemon --watch server.mjs server.mjs --debug",
     "api": "node ./neteasecloudmusicapi/app.js"
   },
   "author": "Quper",

@@ -9,9 +9,14 @@ const getEBI = (id_name) => {return document.getElementById(id_name)}
 
 // definition class
 class App {
+    /**静态文件所在这个网站的位置 */
     static_url = '/src'
-    debug_mode = true
+    /**是否启用调试模式 */
+    debug_mode = false
+    /**API的URL */
     api_url = '/api'
+    /**当前页面的路径 */
+    page_path = location.pathname
     /**是否初始化完成 */
     is_init = false
     lang_text = {
@@ -40,28 +45,33 @@ class App {
             },
             msg_box: {
                 password_error: '密码错误。',
+                input_is_null: '输入内容为空。',
                 name_not_found: '用户名不存在。',
                 id_not_found: 'ID不存在。',
                 bad_request: '错误的请求。',
                 please_select_file: '请选择文件。',
+                please_input: '请输入内容。',
                 not_support_file: '不支持的文件类型。',
                 logging: '登入中...',
                 confirm_logout: '确定登出吗？',
                 change_avatar_finish: '更改头像成功。',
                 change_name_finish: '更改名称成功。',
-                input_is_null: '输入内容为空。',
+                register_user_finish: '注册用户成功。',
+                password_mismatch: '两次密码不一致。',
 
                 // title
                 login_fail: '登入失败',
                 confirm: '确定',
                 finish: '完成',
                 error: '错误',
+                wait: '请稍等',
             },
             server: {
                 name_too_short: '名称过短。',
                 name_too_long: '名称过长。',
                 all_number: '不允许全部使用数字。',
                 name_have_special_char: '不允许包含特殊字符。',
+                is_repeat: '信息重复。',
             }
         }
     }
@@ -111,6 +121,9 @@ class App {
             }
             appendErr(this.initMsgBox())
             appendErr(this.initHeader())
+            const err_list = this.init_err_list
+            if (err_list.length !== 0) return console.error('error message: ', err_list) // 若有错误信息不执行初始化内容
+
             this.user.element.avatar = this.elems_header.logo
             this.user.element.name = this.elems_header.title
             this.is_init = true
@@ -139,7 +152,6 @@ class App {
      * @param {object} data 请求体(对象)
      * @param {function(object | null)} callback 回调函数,传入响应体; 如果未传入该参数将会返回响应JSON结果
      * 
-     * @returns {undefined | object | null} 未传入回调函数将会返回对象(请求成功)或空值(请求失败)
      */
     makeFetch(method = 'GET', url = '', data, callback) {
         if (!method | !url | !data | !callback) { // 未传入任意参数将报错
@@ -503,11 +515,21 @@ class App {
     }
 
     /**
-     * (msgBox)打开一个错误框
+     * (msgBox)[引用]打开一个错误框
      * @param {string} content 传入内容
      */
-    errorBox(content) { this.msgBox(text('msg_box', 'error'), content, 'error') }
-    finishBox(content) { this.msgBox(text('msg_box', 'finish'), content, 'info') }
+    errorBox(content) { this.msgBox(msgBoxText('error'), content, 'error') }
+    /**
+     * (msgBox)[引用]打开一个消息框, 以示完成了某个操作
+     * @param {string} content 传入内容
+     */
+    finishBox(content) { this.msgBox(msgBoxText('finish'), content, 'info') }
+    /**
+     * (msgBox)[引用]打开一个确认框
+     * @param {string} content 传入内容
+     * @param {function(boolean)} callback 回调函数
+     */
+    confirmBox(content, callback) { this.msgBox(msgBoxText('confirm'), content, 'question', false, callback) }
 
     /**
      * 显示一个等待框
@@ -516,18 +538,19 @@ class App {
      * 
      * @returns {Element | undefined} 返回等待框内容的Element
      */
-    waitBox(is_wait, title) {
+    waitBox(is_wait, title = ' ') {
         if (!this.elems_msg_box) return console.error('message box not init.')
         const es = this.elems_msg_box
         es.title.className = 'icon-spinner'
         if (is_wait) {
-            es.title.innerText = '请稍等'
+            es.title.innerText = msgBoxText('wait')
+            es.content.innerText = ''
             es.root.setAttribute('data-style', 'wait')
         }
 
         es.checkbox.checked = is_wait
         this.lockMsgBox(is_wait)
-        if (title) es.content.innerText = title
+        es.content.innerText = title
         return es.content
     }
 
@@ -538,34 +561,74 @@ class App {
      * @param {Element} [element] DOM元素; 若不指定则自动在页面获取`page-nav`ID的DOM元素
      */
     initHeader(element, title = 'OnlineSong') {
+        // 检查有效性
         if (!element) element = document.getElementById('page-nav')
         if (this.elems_header) return 'is_init'
         if (!element) return 'element_not_exist'
-        element.innerHTML = ''
 
+        element.innerHTML = '' // 初始化根内容
+
+        // 创建引用
         const create = this.createElement
         const join = this.joinElement
         const text = (type, key) => this.getText(type, key)
         const src = this.src_url
 
+        /**
+         * 创建头部区域菜单条目
+         * @param {string} title 标题
+         * @param {string} path 链接的URL
+         * @param {string} icon_class_name 字体图标的类名 /(TAG)字体图标/(common.css)
+         * @param {boolean} [not_create] 不创建该元素
+         */
+        const createMenuItem = (title, path, icon_class_name, not_create = false) => {
+            if (not_create) return void 0
+            let attrib = {
+                href: path,
+                class: `pseudo button ${icon_class_name}`
+            }
+
+            if (path === this.page_path) { // 如果是这个页面的路径
+                attrib.class += ' this' 
+                // attrib.disabled = true
+            }
+            return create('a', attrib, title)
+        }
+
+
+        // 获取用户信息
         const user_avatar = this.user.avatar
         const user_name = this.user.name
 
-        const e_logo = create('img', {
+        // 预创建内容
+        const e_logo = create('img', { // logo在用户未登入的情况是, 但登入之后会被替换为用户头像
             class: user_avatar ? 'avatar' : 'logo',
             alt: user_avatar ? 'user avatar' : 'logo',
             src: valid(user_avatar, src.png_logo),
         })
-        const e_title = create('span', {
+        const e_title = create('span', { // 类似于上, 登入之后替换为用户名称
             class: user_name ? 'username' : 'title',
         }, valid(user_name, title))
 
-        const menu = [
-            create('div', {href: '/', class: 'button logo'}, title),
-            create('a', {href: '/', class: 'pseudo button icon-home'}, text('page_name', 'home')),
-            create('a', {href: '/profile', class: 'pseudo button icon-user'}, text('page_name', 'profile')),
-            create('a', {href: '/order', class: 'pseudo button icon-order'}, text('page_name', 'order')),
-            create('a', {href: '/player', class: 'pseudo button icon-player'}, text('page_name', 'player')),
+
+
+        // (TSK) 将menu的search栏完善: 做好窄屏与宽屏的适配
+        // menu_search 后需要添加到menu内 在添加近之前需要对元素进行整合
+        const e_menu_search = create('div', {class: 'lien'}) // 这个是menu_search的根
+        const menu_search = [
+            create()
+        ]
+
+        const menu = [ // /(TAG)导航栏菜单/
+            create('div', { class: 'button logo' }, title), // 移动端菜单头部内容
+            e_menu_search, // 搜索框
+
+            createMenuItem(pageNameText('home'), '/', 'icon-home'),
+            createMenuItem(pageNameText('profile'), '/profile', 'icon-user'),
+            createMenuItem(pageNameText('order'), '/order', 'icon-order'),
+            createMenuItem(pageNameText('player'), '/player', 'icon-player'),
+            // 调试页面只有在debug模式的时候显示
+            createMenuItem(pageNameText('debug'), '/dev', 'icon-debug', !this.debug_mode),
         ]
         const header = {
             'brand': create('section', {'class': 'brand'}),
@@ -603,6 +666,7 @@ const app = new App()
 const text = (type, key) => app.getText(type, key)
 const msgBoxText = key => text('msg_box', key)
 const serverText = key => text('server', key)
+const pageNameText = key => text('page_name', key)
 const log = console.log
 
 
