@@ -72,13 +72,19 @@ const readFile = (file, callback, have_box = true, err_callback) => {
     const reader = new FileReader()
     reader.onload = (event) => {
         const data = event.target.result
+        // log(data.length, 1000000)
+        if (data.length >= 1000000) {
+            es_main.change.avatar.input.value = ''
+            return box('check_file_too_big')
+        }
+        
         callback(data)
     }
     
     reader.readAsDataURL(file)
 }
 
-app.listenerInit((err) => {
+app.listenInit((err) => {
     // ref
     const es_change = es_main.change
     const es_c_avatar = es_change.avatar
@@ -114,6 +120,7 @@ app.listenerInit((err) => {
             'password': password
         }, (res_data) => {
             app.waitBox(false)
+            const target_url = param.from
             if (!res_data) {
                 app.msgBox(msgBoxText('login_fail'), msgBoxText('bad_request'), 'error')
                 return
@@ -126,13 +133,13 @@ app.listenerInit((err) => {
             app.setCookie('login_token', login_token)
             const e_wait_cont = app.waitBox(true, '')
             const e_link = app.createElement('a', {
-                'href': param.from,
+                'href': target_url,
                 'title': 'target'
-            }, param.from).outerHTML
+            }, target_url).outerHTML
             app.setCountdown(3, (time) => {
                 e_wait_cont.innerHTML = `登入成功，${time}秒后自动跳转到${e_link}。`
                 if (time === 0) {
-                    app.switchURL(param)
+                    app.switchURL(target_url)
                 }
             })
         })

@@ -10,7 +10,7 @@ import cookieParser from 'cookie-parser'
 
 
 // 初始化访客用户
-export const GuestUser = new User({ 'is_guest': true })
+const GuestUser = new User({ 'is_guest': true })
 
 
 
@@ -64,12 +64,8 @@ httpApp.use((req, res, next) => {
         const toURL = app.toUrlStr
         const url = `/profile?from=${toURL(req.path)}&type=${toURL(type)}`
         // /(TAG)用户验证失败/
-        res.status(403)
-        app.returnHTML('4xx.html', req, res, {
-            'status': 403,
-            'type': type,
-            'to': url
-        }, true)
+        // res.status(403)
+        app.badReq(res, 403, type, url)
         app.printAccess(req, app.renderColorText('[[red]]403'))
     }
 
@@ -127,48 +123,58 @@ httpApp.use((req, res, next) => {
 })
 
 httpApp.get('/', (req, res) => {
-    app.returnHTML('index.html', req, res, { ver: app.version, project_name: app.name })
+    app.returnHTML('index.html', res, { ver: app.version, project_name: app.name })
     res.end()
 })
 
 httpApp.get('/profile', (req, res) => {
-    app.returnHTML('profile.html', req, res)
+    app.returnHTML('profile.html', res)
     res.end()
 })
 
 // 播放页面
 httpApp.get('/player', (req, res) => {
+    // 获取用户信息
+    const badReq = () => {
+        app.badReq(res, 403, 'no_permissions')
+    }
+    const user = app.getLoginUser(res)
+
+    if (!user) return badReq()
+
+    if (!user.user_role.playing) return badReq()
+
+
     const params = req.params
 
-    app.returnHTML('player.html', req, res)
+    app.returnHTML('player.html', res)
     res.end()
 })
 
 // 点歌页面
 httpApp.get('/order', (req, res) => {
 
-    app.returnHTML('order.html', req, res)
+    app.returnHTML('order.html', res)
     res.end()
 })
 
-// 不存在页面
-// httpApp.get('/not_found', (req, res) => {
-//     app.returnHTML('4xx.html', req, res, {
-//         status: 404,
-//         type: 'not_found',
-//         from: req.path
-//     })
-//     res.end()
-// })
+// 管理面板
+httpApp.get('/admin', (req, res) => {
+    const user = app.getLoginUser(res)
+    if (!user.user_role.admin) return app.badReq(res, 403, 'no_permissions')
+    
+    app.returnHTML('admin.html', res)
+    res.end()
+})
 
 // 调试页面
 httpApp.get('/dev', (req, res) => {
-    app.returnHTML('dev.html', req, res, {
+    app.returnHTML('dev.html', res, {
         'user_data': app.objToStr(
             res.locals.user, {
-            no_color: true,
-            title: res.locals.user.profile.name
-        }
+                no_color: true,
+                title: res.locals.user.profile.name
+            }
         )
     })
     res.end()
@@ -239,10 +245,10 @@ httpApp.post('/api', (req, res) => {
      * 结束这个响应, 向客户端发送res_data
      * @param {string} [err_message] 返回的错误信息
      * @example
-     * res_data.valid = true
-     * res_data.message = ''
-     * res_data.data = {}
+     * res_data.data = {'value': 'ok'} // 你可以这样用, 这是请求成功
      * return endReq()
+     * 
+     * return endReq('error_message') // 也可以这样用, 不需要多余的赋值操作
      */
     const endReq = (err_message) => {
         if (err_message) {
@@ -265,11 +271,11 @@ httpApp.post('/api', (req, res) => {
     /**来自客户端的请求参数 @type {object} */
     const req_data = req.body // 获取请求体
     // /(TAG)API/
+    // API在这里实现
     const param_command = { // 指定对应请求的操作
         'add_song': () => {
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
             if (!user) {
-                res_data.valid = false
                 return endReq('user_not_exist')
             }
             user.order({
@@ -314,7 +320,6 @@ httpApp.post('/api', (req, res) => {
 
             // 登入成功
             const client_token = user.addLogin()
-            res_data.valid = true
             res_data.data.token = client_token
             endReq()
             return
@@ -332,7 +337,6 @@ httpApp.post('/api', (req, res) => {
 
             // 注册成功
             res_data.data.token = user.addLogin()
-            res_data.valid = true
             endReq()
             return
         },
@@ -357,9 +361,49 @@ httpApp.post('/api', (req, res) => {
                 res_data.data.src = user.user_profile.avatar
             }
             
-            res_data.valid = true
+            // 更改完毕
             endReq()
             return
+        },
+        'admin': () => {
+            // 管理员专用API
+
+            /**这是标准的请求参数 */
+            const _example_req_data = {
+                type: 'admin',
+                method: 'xxx',
+                target: {
+                    id: 114514,
+                    name: 'xxx',
+                }
+            }
+
+            const is_valid = true
+
+            if (user.user_role.admin) return endReq('no_permissions')
+            const {method, target} = req_data
+
+            switch (method) {
+                case 'get_all_user': // 获取所有用户数据
+                    res_data.data = user.all_user
+
+                    break
+                case 'change_user_role': // 更改用户角色
+                    const target_id = target.id
+                    if (!isValid(target_id)) return
+                    if (checkErr(user.changeRole(target_id))) return
+
+                    break
+                case 'example': // 获取请求内容示范
+                    res_data.data = _example_req_data
+
+                    break
+                default: // 无效请求
+                    is_valid = false
+                    break
+            }
+
+            is_valid ? endReq() : endReq('unknown_param')
         }
     }
 
@@ -404,11 +448,7 @@ httpApp.use(`/${config.static_url}`, express.static(config.static_path)) // 设�
 /**路由不存在 */
 httpApp.use((req, res, next) => {
     res.status(404)
-    app.returnHTML('4xx.html', req, res, {
-        status: 404,
-        type: 'not_found',
-        to: '/'
-    }, true)
+    app.badReq(res, 404, 'not_found', '/')
     next()
 })
 

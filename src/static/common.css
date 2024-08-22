@@ -11,12 +11,56 @@
     font-display: block;
 }
 
+:root {
+    --normal-button-color: #0074d9;
+    --disabled-button-color: #aaa;
+}
+
 p {
     text-indent: 2em;
 }
 
 body {
     padding-top: 3em;
+}
+
+/* 一行显示的lits */
+.row-list {
+    padding: 0;
+    list-style: none;
+}
+
+.row-list * {
+    display: inline-block;
+}
+
+
+/* 粘性定位 */
+
+.sticky-top {
+    position: sticky;
+    top: 0;
+    box-shadow: 0 0 .4em #999;
+}
+
+
+.block-center {
+    margin: 0 auto;
+}
+
+
+.scroll-y, .scroll-x {
+    text-wrap: nowrap;
+}
+
+.scroll-y {
+    height: 100%;
+    overflow-y: scroll;
+}
+
+.scroll-x {
+    max-width: 100%;
+    overflow-x: scroll;
 }
 
 
@@ -34,6 +78,22 @@ body {
     max-width: 540px;
     margin: 0 auto;
     /* padding: 0 1em; */
+}
+
+
+
+
+/* 一般情况样式 */
+
+/* 按钮图标 */
+button.icon-show {
+    background-color: var(--normal-button-color);
+    box-shadow: 0 0 0.4em #aaa;
+}
+
+button.icon-hidden {
+    background-color: var(--disabled-button-color);
+    box-shadow: inset 0 0 .4em #777;
 }
 
 
@@ -94,7 +154,7 @@ body {
 } */
 
 nav#page-nav .menu .this {
-    background-color: #dddddd;
+    background-color: #ededed;
     /* color: #000; */
 }
 
@@ -138,7 +198,7 @@ nav#page-nav .brand .avatar {
 
 [class*="icon-"]::before {
     font-family: 'icomoon';
-    padding-top: .3em;
+    padding-top: 0.3em;
 }
 .icon-menu::before { content: '\e9bd';}
 .icon-home::before {content: '\e900';}
@@ -153,6 +213,8 @@ nav#page-nav .brand .avatar {
 .icon-spinner::before {content: '\e984';display: inline-block;padding: 0;transform-origin: 50% 47%;animation: rotation 1.2s ease-out infinite;}
 .icon-notification::before {content: '\ea08'; color: orange;}
 .icon-question::before {content: '\ea09'; color: orange;}
+.icon-show::before {content: '\e9ce';}
+.icon-hidden::before {content: '\e9d1';}
 
 
 

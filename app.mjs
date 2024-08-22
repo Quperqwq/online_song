@@ -786,14 +786,14 @@ class App {
 
     // 路由中间函数相关...
     /**
-     * 用于路由函数,返回获取到的HTML文件值到客户端
+     * (Express)用于路由函数,返回获取到的HTML文件值到客户端
      * @param {string} file_name HTML文件名(定义在config路径的相对路径)
      * @param {Request} req Request值
      * @param {Response} res Response值
      * @param {object | undefined} data 传入到网页的键值对用于模板替换
      * @param {boolean} [is_meat_data=false] 是否创建meat以传递数据
      */
-    returnHTML(file_name, req, res, data = {}, is_meat_data = false) {
+    returnHTML(file_name, res, data = {}, is_meat_data = false) {
         /**头部元素 */
         let head_cont = `${this.html_head_cont}\n`
 
@@ -883,6 +883,58 @@ class App {
      */
     onError(message) { throw new Error(`${message}`) }
 
+    /**
+     * (Express)获取上下文的user实例
+     * @param {Response} res 
+     * @returns {undefined | User}
+     */
+    getLoginUser(res) {
+        const user = res.locals.user
+        if (!user.is_login) return
+        
+        return user
+    }
+
+    // /**
+    //  * (Express)结束这次访问, 通常用于错误请求的结束访问; 在错误状态码下会返回错误提示页面
+    //  * @param {Response} res 
+    //  * @param {number} [status] 指定状态
+    //  * @param {string} [to_url] 4xx状态码下跳转到哪个URL
+    //  * @param {string} [type] 指定显示提示信息
+    //  */
+    // endReq(res, status = 403, to_url, type = 'unknown') {
+    //     let need_page = false
+    //     if (Number.toString(status).startsWith('4')) { // 4xx
+    //         need_page = true
+    //     }
+
+
+    //     if (need_page) { // 在错误状态码渲染页面
+    //         this.returnHTML('4xx.html', res, {
+    //             'status': status,
+    //             'type': type,
+    //             'to': to_url
+    //         }, true)
+    //     }
+    //     res.status(status)
+    //     res.end()
+    // }
+
+    /**
+     * (Express)返回客户端错误请求的页面
+     * @param {Response} res 
+     * @param {number} status 响应码
+     * @param {string} type 错误类型(传递到页面)
+     * @param {string} to_url 跳转到的url
+     */
+    badReq(res, status = 403, type = 'unknown', to_url = '/') {
+        this.returnHTML('4xx.html', res, {
+            'status': status,
+            'type': type,
+            'to': to_url
+        }, true)
+        res.status(status).end()
+    }
 }
 
 
@@ -1080,6 +1132,7 @@ export class User extends Player {
      * @typedef {Object} UserInfo 关于用户
      * @property {number} ctime 创建时间
      * @property {number} mtime 修改时间时间
+     * @property {number} login_time 上次登入时间(非临时登入)
      */
     /**
      * 构建一个User类
@@ -1187,6 +1240,11 @@ export class User extends Player {
     /**(user_data)获取用户verify信息 */
     get user_verify() {
         return this.user_data.verify
+    }
+
+    /**(user_data)获取用户role信息 */
+    get user_role() {
+        return this.user_data.role
     }
 
     /**初始化内容 */
@@ -1462,6 +1520,8 @@ export class User extends Player {
         if (!(get_token === token)) return 'password_error'
 
         // 校验成功
+        this.user_data.info.login_time = app.getTime() // 更新用户上次登入时间
+        this.update()
         return finish(is_name_login ? 'user_name' : 'uid')
     }
 
@@ -1516,7 +1576,8 @@ export class User extends Player {
             'role': user_role,
             'info': {
                 ctime: time,
-                mtime: time
+                mtime: time,
+                login_time: -1
             }
         }
         this.all_user[uid] = user_data
@@ -1588,21 +1649,23 @@ export class User extends Player {
             case 'avatar':
                 // 头像
                 // 字符串头
-                const base64_head = 'data:image/png;base64,'
-                // (FIX)需要支持更多数据类型 如data:image/jpeg;base64,
-                //   请更改为case data:image/
-                //   后续根据后面的内容更改文件扩展名
+                // (ADD) 后续添加统一转换的图片
+                const base64_regex = /^data:image\/([a-zA-Z]+);base64,/
+                const match = value.match(base64_regex)
 
 
-                if (value.startsWith(base64_head)) { // 传入的数据是base64格式, 保存为用户头像文件
-                    const filename = `${this.profile.id}.jpg`
-                    const data = value.replace(base64_head, '')
+                if (match) { // 传入的数据是base64格式, 保存为用户头像文件
+                    const image_type = match[1]
+                    const filename = `${this.profile.id}.${image_type}`
+                    const data = value.split(',')[1]
                     const buffer = Buffer.from(data, 'base64')
                     if (buffer.length > 524288) return 'size_too_big'
                     const valid = app.writeFile(app.getUserAvatarPath(filename), buffer)
                     if (!valid) return 'save_file_error'
                     value = app.getStaticURL(`avatar/${filename}`) // 最终的头像内容是静态文件头像的URL
                 }
+
+                if (value.length > 92) return 'length_too_long'
                 
                 this.user_data.profile.avatar = value
                 break
@@ -1617,8 +1680,32 @@ export class User extends Player {
 
         return ''
     }
-}
 
+    /**
+     * (admin user)更改指定用户的角色
+     * @param {number} target_id 目标用户的ID
+     * @param {UserRole} role_name 角色名
+     * @param {boolean} role_value 角色名对应的值
+     */
+    changeRole(target_id, role_name, role_value) {
+        if (!this.user_role.admin) return 'no_permissions' // 检查
+
+        const target_user = this.all_data.users[target_id] // 确定
+        if (!target_user) return 'user_not_exist'
+
+        try { // 更改
+            target_user.role[role_name] = role_value
+        } catch (err) {
+            return 'set_fail'
+        }
+        if (this.update()) {
+            return ''
+        } else {
+            return 'set_fail'
+        }
+        
+    }
+}
 
 
 // 初始化config信息

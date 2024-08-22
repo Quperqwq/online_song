@@ -7,7 +7,7 @@
     "debug": "node server.mjs --debug",
     "start": "node server.mjs --start",
     "test": "node server.mjs --test",
-    "dev": "nodemon --watch server.mjs server.mjs --debug",
+    "dev": "nodemon --watch server.mjs --watch app.mjs server.mjs --debug",
     "api": "node ./neteasecloudmusicapi/app.js"
   },
   "author": "Quper",

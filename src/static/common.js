@@ -46,6 +46,7 @@ class App {
             msg_box: {
                 password_error: '密码错误。',
                 input_is_null: '输入内容为空。',
+                check_file_too_big: '选择的文件过大。',
                 name_not_found: '用户名不存在。',
                 id_not_found: 'ID不存在。',
                 bad_request: '错误的请求。',
@@ -135,7 +136,7 @@ class App {
      * 监听`App`初始化完成
      * @param {function(Array.<string> | undefined)} callback 回调函数, 传入初始化时错误信息
      */
-    listenerInit(callback) {
+    listenInit(callback) {
         this._initCallback = () => {
             const err = this.init_err_list
             callback(err.length ? err : undefined)
@@ -333,6 +334,21 @@ class App {
         })
     }
 
+    /**
+     * 判断一个元素是否包含某个类名
+     * @param {Element} element 
+     * @param {string} class_name 
+     */
+    haveClassName(element, class_name) {
+        let is_have = false
+        element.classList.forEach((item) => {
+            if (item === class_name) {
+                is_have = true
+            }
+        })
+        return is_have
+    }
+
 
 
     // 网页相关
@@ -346,7 +362,7 @@ class App {
 
     /**刷新网页 */
     reloadPage() {
-        location.reload()
+        if (!this.debug_mode) location.reload()
         return
     }
 

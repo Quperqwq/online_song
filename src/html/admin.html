@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{ __html_head }}
+
+    <style>
+        [class*="icon-"]::before {
+            margin: 0;
+        }
+
+
+
+
+        .control {
+            margin-top: 1em;
+            padding: 0 2em;
+            background-color: #fff;
+            background-color: #f7f7f7;
+            border-radius: 1em;
+        }
+
+        .control h2 {
+            color: #333;
+        }
+
+        .table-area {
+            height: 70%;
+            margin: 0 1em;
+        }
+
+        [data-style-hidden="time"] [class$="-time"],
+        [data-style-hidden="name"] .name,
+        [data-style-hidden="role"] .role {
+            display: none;
+        }
+
+        table .name {
+            position: sticky;
+            left: 0;
+            filter: brightness(1.2);
+        }
+    </style>
+
+    <title> admin </title>
+</head>
+
+<body>
+    <nav id="page-nav"></nav>
+
+    <section class="control space">
+        <h2> 管理面板 </h2>
+        <ul class="row-list">
+            <li>
+                <button id="but-show-time" class="icon-show" type="button" title="show time"> 时间 </button>
+            </li>
+            <li>
+                <button id="but-show-name" class="icon-show" type="button" title="show user name"> 用户名 </button>
+            </li>
+            <li>
+                <button id="but-show-role" class="icon-show" type="button" title="show user role"> 角色 </button>
+            </li>
+        </ul>
+    </section>
+
+
+
+    <section class="scroll-x scroll-x table-area">
+        <table id="table" class="block-center" data-style-hidden="">
+            <thead class="sticky-top">
+                <tr>
+                    <th class="name"> 用户名 </th>
+                    <th class="userid"> 用户ID </th>
+                    <th class="c-time"> 注册时间 </th>
+                    <th class="m-time"> 上次更改时间 </th>
+                    <th class="login-time"> 上次登入时间 </th>
+                    <th class="role"> 用户权限 </th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <td> 稍等... </td>
+            </tbody>
+        </table>
+    </section>
+
+
+
+    <section id="msg-box"></section>
+    <script src="/src/page-admin.js"></script>
+</body>
+
+</html>
