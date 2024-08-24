@@ -1,0 +1,256 @@
+body {
+    padding: 0;
+}
+
+main {
+    display: flex;
+    position: relative;
+}
+
+
+
+.list {
+    width: 25em;
+}
+
+.list h2 {
+    margin-left: 1.4em;
+    padding: .3em 0;
+}
+
+.list h2 span {
+    color: var(--normal-color);
+    border: .1em solid;
+    border-radius: .2em;
+    padding: 0 .2em;
+}
+
+.list section {
+    border-radius: .2em;
+    box-shadow: 0 0 8px #ccc;
+    height: 100%;
+    overflow-y: scroll;
+    margin: 0 1em;
+}
+
+#play-list [data-style="hidden"] {
+    transition: all .2s;
+    transform: scale(0);
+}
+
+#play-list {
+    margin: 0;
+    padding-left: 0;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 3em;
+}
+
+#play-list li {
+    margin: 0 .2em;
+    margin-top: .2em;
+    padding: .1em 0;
+    padding-left: .4em;
+    list-style: none;
+    /* margin: 0; */
+    font-size: 1.2em;
+    background-color: #eee;
+    border-radius: .2em;
+    color: #999;
+}
+
+/* #play-list li:not(:first-child) {
+    margin-top: .2em;
+} */
+
+#play-list li article {
+    text-wrap: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+#play-list li .info {
+    font-size: .8em;
+    /* padding-top: .2em; */
+    display: flex;
+    align-items: center;
+}
+
+#play-list li .info .name {
+    font-weight: 100;
+}
+
+#play-list li .info .number {
+    padding: 0 .4em;
+    margin-right: .5em;
+    border-radius: .2em;
+    background-color: #ccc;
+    color: #ffffff;
+}
+
+#play-list li .info .number::before {
+    content: '#';
+}
+
+#play-list li .info img {
+    width: 1em;
+    height: 1em;
+    margin-right: .2em;
+    /* vertical-align: baseline; */
+}
+
+
+#play-list li .item .title {
+    font-weight: 600;
+    color: #333;
+}
+
+#play-list li .item .singer::before {
+    content: '-';
+}
+
+
+
+
+.player {
+    position: relative;
+    width: 100%;
+    font-size: 1.4em;
+}
+
+.player .background {
+    position: relative;
+    height: 13em;
+    width: 100%;
+    background: var(--image-url) no-repeat center;
+    background-size: cover;
+    /* filter: blur(.2em); */
+    border-radius: 0 0 0 2.2em;
+}
+
+.progress {
+    position: absolute;
+    top: 0;
+    width: 100%;
+}
+
+.progress.playing .content {
+    animation: blink 3.2s infinite;
+}
+
+.progress .content {
+    --progress-height: .4em;
+    --size: calc(var(--progress-height) + .4em);
+    transition: width 0.2s ease-out;
+    position: relative;
+    width: var(--progress);
+    height: var(--progress-height);
+    background-color: #72ffd3;
+    box-shadow: 0 0 8px 0px #bbb;
+}
+
+.progress .content::after { /* 进度条的小点点 */
+    position: absolute;
+    content: '';
+    display: block;
+    right: calc(var(--progress-height) * -1);
+    top: -.2em;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 100%;
+    background-color: #fff;
+    box-shadow: 0 0 4px 0px #eee;
+}
+
+
+
+
+.player .lyric {
+    position: relative;
+    overflow-y: scroll;
+    height: 30vh;
+    float: left;
+    width: 49%;
+    margin-top: 2em;
+    box-shadow: inset 0 0 0.2em 0 #aaa;
+    border-radius: .4em;
+}
+
+
+.player .lyric ul,
+.player .lyric ul li {
+    margin: 0;
+    padding: 0;
+}
+
+.player .lyric ul li {
+    padding-left: 0.4em;
+    color: #999;
+}
+
+.player .lyric ul li.now {
+    transition: all .1s;
+    background-color: #777;
+    color: #fff;
+}
+
+
+
+
+
+.player .info {
+    float: right;
+    text-align: right;
+    width: 50%;
+    overflow: hidden;
+    text-wrap: nowrap;
+    text-overflow: ellipsis;
+    padding-right: 1em;
+    margin-right: .2em;
+}
+
+/* .player .singer::before {
+    content: '-';
+} */
+
+.player .order,
+.player .singer {
+    color: #fff;
+    font-size: .8em;
+    background-color: #777;
+    padding: .2em .4em;
+    border-radius: .4em;
+}
+
+.player .order {
+    background-color: #999;
+    margin-right: .3em;
+}
+
+
+@media (max-width: 790px) {
+    main {
+        display: flex;
+        flex-direction: column-reverse;
+    }
+
+    .list {
+        height: 16vh;
+        width: 100%;
+    }
+
+    .player .background {
+        height: 8em;
+        border-radius: 0 0 2.2em 2.2em;
+    }
+
+    .player .info,
+    .player .lyric {
+        float: left;
+        width: 100%;
+    }
+    .player .lyric {
+        height: 20vh;
+        margin-top: .5em;
+    }
+}

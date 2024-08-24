@@ -2,7 +2,7 @@
  * 程序的入口文件, 构建了一个HTTP服务; 本文件主用于HTTP服务逻辑
  */
 
-import {app, player, User, config} from './app.mjs' // 引入主类
+import {app, Player, player, User, config} from './app.mjs' // 引入主类
 
 import express from 'express' // express框架
 import cookieParser from 'cookie-parser'
@@ -83,7 +83,11 @@ httpApp.use((req, res, next) => {
         res.locals.user = user // 验证成功赋值到对象
         res.locals.pre_data = { // 向网页元素预传入用户信息
             avatar: user_profile.avatar,
-            name: user_profile.name
+            name: user_profile.name,
+        }
+        if (user.user_role.admin) { // 用户是否有管理员权限: 创建导航栏快捷方式
+            res.locals.pre_data.have_admin = 'have'
+
         }
         role = true
         return
@@ -132,17 +136,12 @@ httpApp.get('/profile', (req, res) => {
     res.end()
 })
 
+
 // 播放页面
 httpApp.get('/player', (req, res) => {
-    // 获取用户信息
-    const badReq = () => {
-        app.badReq(res, 403, 'no_permissions')
-    }
+    // 检查权限
     const user = app.getLoginUser(res)
-
-    if (!user) return badReq()
-
-    if (!user.user_role.playing) return badReq()
+    if (!app.checkRole(user, res, 'playing')) return
 
 
     const params = req.params
@@ -153,6 +152,9 @@ httpApp.get('/player', (req, res) => {
 
 // 点歌页面
 httpApp.get('/order', (req, res) => {
+    // 检查权限
+    const user = app.getLoginUser(res)
+    if (!app.checkRole(user, res, 'order')) return
 
     app.returnHTML('order.html', res)
     res.end()
@@ -214,6 +216,19 @@ httpApp.post('/api', (req, res) => {
 
     /**从上一个处理中获得的用户信息 @type {User | undefined} */
     const user = res.locals.user
+    /**
+     * 需要登入时执行此函数以校验用户是否登入
+     * @returns {boolean} 用户是否登入
+     */
+    const isLogin = () => {
+        const badReq = () => {
+            endReq('not_login')
+            return false
+        }
+        if (!user) return badReq()
+        if (!user.is_login) return badReq()
+        return true
+    }
 
     /**
      * 传入值,若值非有效输出为默认值
@@ -230,7 +245,8 @@ httpApp.post('/api', (req, res) => {
     const isValid = (...value) => {
         let is_valid = true
         value.forEach((item) => { // 遍历所有参数
-            if (!item && is_valid) { // 无效参数且没有返回错误信息的情况
+            const item_type = typeof item
+            if (!item && is_valid && item_type !== 'boolean') { // 无效参数且没有返回错误信息的情况
                 // app.warn('invalid_request_param', app.objToStr(req_data))
                 res_data.valid = false
                 res_data.message = 'missing_param'
@@ -261,23 +277,26 @@ httpApp.post('/api', (req, res) => {
     /**
      * 检查是否有错误信息, 若有将结束响应返回错误信息, 函数返回true; 反之false
      * @param {string} err 错误信息
+     * @param {object} [data] 如果遇到错误时返回`res_data`的data值
      */
-    const checkErr = (err) => {
+    const checkErr = (err, data) => {
         if (!err) return false
+        if (data) {
+            res_data.data = data
+        }
         endReq(err)
         return true
     }
 
     /**来自客户端的请求参数 @type {object} */
     const req_data = req.body // 获取请求体
-    // /(TAG)API/
-    // API在这里实现
+    // /(TAG)API/  API在这里实现
     const param_command = { // 指定对应请求的操作
+        // 用户添加歌曲到播放列表
         'add_song': () => {
+            if (!isLogin()) return
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
-            if (!user) {
-                return endReq('user_not_exist')
-            }
+            if (!app.checkRole(user, res, 'order')) return
             user.order({
                 'cover': req_data.cover,
                 'singer': req_data.singer,
@@ -295,6 +314,7 @@ httpApp.post('/api', (req, res) => {
             })
 
         },
+        // 用户登入
         'login': () => {
             // /(TAG)登入API方法/
             let _err = ''
@@ -324,8 +344,18 @@ httpApp.post('/api', (req, res) => {
             endReq()
             return
         },
+        // 获取歌曲列表(FIX)
+        'get_song_list': () => {
+            if (!isLogin()) return
+            if (!app.checkRole(user, res, 'playing')) return
+
+            // (FIX) 无法正常地返回预期值
+            res_data.data.list = user.list
+            endReq()
+            return
+        },
+        // 用户注册
         'register': () => {
-            // 用户注册方法
             // (FIX)在传输过程中容易造成密码被窃
             const {password, name} = req_data
             if (!isValid(password, name)) return
@@ -340,12 +370,9 @@ httpApp.post('/api', (req, res) => {
             endReq()
             return
         },
+        // 更改用户信息
         'change': () => {
-            // 更改用户信息
-            if (!user.is_login) {
-                endReq('not_login')
-                return
-            }
+            if (!isLogin()) return
             let _err = ''
             const type = req_data.target // 更改类型
 
@@ -365,23 +392,20 @@ httpApp.post('/api', (req, res) => {
             endReq()
             return
         },
+        // 管理员用API
         'admin': () => {
-            // 管理员专用API
+            if (!user.user_role.admin) return endReq('no_permissions')
 
             /**这是标准的请求参数 */
             const _example_req_data = {
                 type: 'admin',
                 method: 'xxx',
-                target: {
-                    id: 114514,
-                    name: 'xxx',
-                }
+                id: 114514
             }
 
             const is_valid = true
 
-            if (user.user_role.admin) return endReq('no_permissions')
-            const {method, target} = req_data
+            const {method, uid, target, value} = req_data
 
             switch (method) {
                 case 'get_all_user': // 获取所有用户数据
@@ -389,9 +413,8 @@ httpApp.post('/api', (req, res) => {
 
                     break
                 case 'change_user_role': // 更改用户角色
-                    const target_id = target.id
-                    if (!isValid(target_id)) return
-                    if (checkErr(user.changeRole(target_id))) return
+                    if (!isValid(uid, target, value)) return
+                    if (checkErr(user.changeRole(uid, target, value))) return
 
                     break
                 case 'example': // 获取请求内容示范

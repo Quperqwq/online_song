@@ -121,18 +121,10 @@ app.listenInit((err) => {
         }, (res_data) => {
             app.waitBox(false)
             const target_url = param.from
-            if (!res_data) {
-                app.msgBox(msgBoxText('login_fail'), msgBoxText('bad_request'), 'error')
-                return
-            }
-            if (!res_data.valid) {
-                app.msgBox(msgBoxText('login_fail'), msgBoxText(res_data.message), 'error')
-                return
-            }
             const login_token = res_data.data.token
             app.setCookie('login_token', login_token)
             const e_wait_cont = app.waitBox(true, '')
-            const e_link = app.createElement('a', {
+            const e_link = createElement('a', {
                 'href': target_url,
                 'title': 'target'
             }, target_url).outerHTML
@@ -158,9 +150,6 @@ app.listenInit((err) => {
 
         app.useAPI({type: 'register', name: name, password: password}, (res_data) => {
             app.waitBox(false)
-            if (!res_data) return app.errorBox(msgBoxText('bad_request'))
-            const {valid, message} = res_data
-            if (!valid) return app.errorBox(serverText(message))
             
             const es_login = es_main.login
             es_login.name.value = name

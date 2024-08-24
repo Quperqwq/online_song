@@ -12,7 +12,7 @@
 }
 
 :root {
-    --normal-button-color: #0074d9;
+    --normal-color: #0074d9;
     --disabled-button-color: #aaa;
 }
 
@@ -24,9 +24,14 @@ body {
     padding-top: 3em;
 }
 
+ul {
+    list-style: none;
+}
+
 /* 一行显示的lits */
 .row-list {
     padding: 0;
+    margin: 0;
     list-style: none;
 }
 
@@ -34,6 +39,17 @@ body {
     display: inline-block;
 }
 
+
+
+/* 隐藏滚动条 */
+.no-scroll-bar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+}
+.no-scroll-bar::-webkit-scrollbar {
+    display: none; /* Chrome Safari */
+}
+  
 
 /* 粘性定位 */
 
@@ -87,7 +103,7 @@ body {
 
 /* 按钮图标 */
 button.icon-show {
-    background-color: var(--normal-button-color);
+    background-color: var(--normal-color);
     box-shadow: 0 0 0.4em #aaa;
 }
 
@@ -153,6 +169,10 @@ button.icon-hidden {
     overflow: hidden;
 } */
 
+nav#page-nav.hidden {
+    margin-top: -3em;
+}
+
 nav#page-nav .menu .this {
     background-color: #ededed;
     /* color: #000; */
@@ -187,7 +207,7 @@ nav#page-nav .menu .search {
     }
 }
 
-nav#page-nav .brand .avatar {
+nav#page-nav .brand .avatar, .avatar {
     border-radius: 0.2em;
     width: 2em;
     height: 2em;
@@ -210,11 +230,14 @@ nav#page-nav .brand .avatar {
 .icon-error::before {content: '\ea0f';color: red;}
 .icon-info::before {content: '\ea0c';color: deepskyblue;}
 .icon-warn::before {content: '\ea08';color: orange;}
-.icon-spinner::before {content: '\e984';display: inline-block;padding: 0;transform-origin: 50% 47%;animation: rotation 1.2s ease-out infinite;}
+.icon-spinner::before, .icon-refresh::before {content: '\e984';}
+.icon-spinner::before {display: inline-block;padding: 0;transform-origin: 50% 47%;animation: rotation 1.2s ease-out infinite;}
 .icon-notification::before {content: '\ea08'; color: orange;}
 .icon-question::before {content: '\ea09'; color: orange;}
 .icon-show::before {content: '\e9ce';}
 .icon-hidden::before {content: '\e9d1';}
+.icon-del::before {content: '\e9ac';}
+.icon-admin::before, .icon-users::before {content: '\e972';}
 
 
 
@@ -228,5 +251,14 @@ nav#page-nav .brand .avatar {
     }
     100% {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes blink {
+    0% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(1.2);
     }
 }

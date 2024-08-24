@@ -883,6 +883,10 @@ class App {
      */
     onError(message) { throw new Error(`${message}`) }
 
+
+
+
+    // `server.mjs`工具/复用函数
     /**
      * (Express)获取上下文的user实例
      * @param {Response} res 
@@ -894,31 +898,6 @@ class App {
         
         return user
     }
-
-    // /**
-    //  * (Express)结束这次访问, 通常用于错误请求的结束访问; 在错误状态码下会返回错误提示页面
-    //  * @param {Response} res 
-    //  * @param {number} [status] 指定状态
-    //  * @param {string} [to_url] 4xx状态码下跳转到哪个URL
-    //  * @param {string} [type] 指定显示提示信息
-    //  */
-    // endReq(res, status = 403, to_url, type = 'unknown') {
-    //     let need_page = false
-    //     if (Number.toString(status).startsWith('4')) { // 4xx
-    //         need_page = true
-    //     }
-
-
-    //     if (need_page) { // 在错误状态码渲染页面
-    //         this.returnHTML('4xx.html', res, {
-    //             'status': status,
-    //             'type': type,
-    //             'to': to_url
-    //         }, true)
-    //     }
-    //     res.status(status)
-    //     res.end()
-    // }
 
     /**
      * (Express)返回客户端错误请求的页面
@@ -935,10 +914,28 @@ class App {
         }, true)
         res.status(status).end()
     }
+
+    /**
+     * (Express)检查用户权限, 若出现无权限或未实例化用户时自动返回客户端`403`页面
+     * @param {User} user 
+     * @param {Response} res 
+     * @param {string} role_type 
+     * 
+     * @returns {boolean} 是否有权限
+     */
+    checkRole(user, res, role_type) {
+        const badReq = () => {
+            app.badReq(res, 403, 'no_permissions')
+            return false
+        }
+        if (!user) return badReq()
+        if (!user.user_role[role_type]) return badReq()
+        return true
+    }
 }
 
 
-class Player {
+export class Player {
     list = []
     /**
      * @typedef {Object} Song
@@ -999,6 +996,7 @@ class Player {
         }
         const push = () => { // 临时定义函数用于兼容异步函数
             if (!Player.list) Player.list = []
+            // app.log(Player.list)
             const song_id = Player.list.length
             /**@type {Song} */
             const push_data = {
@@ -1520,7 +1518,7 @@ export class User extends Player {
         if (!(get_token === token)) return 'password_error'
 
         // 校验成功
-        this.user_data.info.login_time = app.getTime() // 更新用户上次登入时间
+        this.all_user[uid].info.login_time = app.getTime() // 更新用户上次登入时间
         this.update()
         return finish(is_name_login ? 'user_name' : 'uid')
     }
@@ -1689,6 +1687,7 @@ export class User extends Player {
      */
     changeRole(target_id, role_name, role_value) {
         if (!this.user_role.admin) return 'no_permissions' // 检查
+        if (this.profile.id === target_id) return 'cant_self' // 不可操作自己的权限
 
         const target_user = this.all_data.users[target_id] // 确定
         if (!target_user) return 'user_not_exist'
@@ -1728,5 +1727,5 @@ _init_config()
 export const app = new App()
 export const player = new Player()
 // 初始化版本信息
-app.version = 'dev-202408_22/new'
+app.version = 'dev-202408_24'
 

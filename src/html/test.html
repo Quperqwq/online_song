@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>环绕进度条</title>
+    <style>
+        .container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+        }
+        
+        .progress {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #3498db 0%,
+                #3498db var(--progress),
+                #e0e0e0 var(--progress),
+                #e0e0e0 100%
+            );
+            transition: background 0.5s ease;
+        }
+
+        .cover {
+            width: 80px;
+            height: 80px;
+            background-color: white;
+            border-radius: 50%;
+            position: relative;
+            z-index: 1; /* 确保在进度条之上 */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress" style="--progress: 75%;"></div>
+    <div class="cover"></div>
+</div>
+
+</body>
+</html>

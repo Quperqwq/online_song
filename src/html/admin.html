@@ -7,15 +7,28 @@
     {{ __html_head }}
 
     <style>
-        [class*="icon-"]::before {
+        button[class*="icon-"]::before {
+            margin: 0;
+        }
+        tr button[class*="icon-"] {
             margin: 0;
         }
 
+
+        .operate-item {
+            font-size: .8em;
+            margin-right: .2em;
+        }
+        
+        .operate-item::before {
+            font-size: .8em;
+        }
 
 
 
         .control {
             margin-top: 1em;
+            margin-bottom: 1em;
             padding: 0 2em;
             background-color: #fff;
             background-color: #f7f7f7;
@@ -31,16 +44,28 @@
             margin: 0 1em;
         }
 
-        [data-style-hidden="time"] [class$="-time"],
-        [data-style-hidden="name"] .name,
-        [data-style-hidden="role"] .role {
+        [data-style-hidden*="time"] [class$="-time"],
+        [data-style-hidden*="name"] .name,
+        [data-style-hidden*="role"] .role {
             display: none;
+        }
+
+        table td {
+            position: relative;
+            z-index: 1;
         }
 
         table .name {
             position: sticky;
             left: 0;
             filter: brightness(1.2);
+            background-color: var(--normal-color);
+            z-index: 2;
+        }
+
+        table td.name {
+            filter: brightness(1);
+            color: #fff;
         }
     </style>
 
@@ -63,6 +88,11 @@
                 <button id="but-show-role" class="icon-show" type="button" title="show user role"> 角色 </button>
             </li>
         </ul>
+        <ul class="row-list">
+            <li>
+                <button id="btn-refresh-data" class="icon-refresh" type="button" title="refresh data"> 刷新数据 </button>
+            </li>
+        </ul>
     </section>
 
 
@@ -72,15 +102,19 @@
             <thead class="sticky-top">
                 <tr>
                     <th class="name"> 用户名 </th>
-                    <th class="userid"> 用户ID </th>
+                    <th class="id"> UID </th>
                     <th class="c-time"> 注册时间 </th>
                     <th class="m-time"> 上次更改时间 </th>
                     <th class="login-time"> 上次登入时间 </th>
-                    <th class="role"> 用户权限 </th>
+                    <th class="role"> 
+                        角色 </th>
+                    <th class="operate"> 操作 </th>
                 </tr>
             </thead>
             <tbody id="table-body">
-                <td> 稍等... </td>
+                <tr>
+                    <td> 稍等... </td>
+                </tr>
             </tbody>
         </table>
     </section>

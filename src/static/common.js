@@ -12,13 +12,15 @@ class App {
     /**静态文件所在这个网站的位置 */
     static_url = '/src'
     /**是否启用调试模式 */
-    debug_mode = false
+    debug_mode = true
     /**API的URL */
     api_url = '/api'
     /**当前页面的路径 */
     page_path = location.pathname
     /**是否初始化完成 */
     is_init = false
+    /**循环请求(如更新歌单列表)的间隔时间(毫秒) */
+    loop_res_time = 5000
     lang_text = {
         'zh-CN': {
             status: {
@@ -38,10 +40,12 @@ class App {
                 'menu': '菜单',
             },
             page_name: {
-                'home': '主页',
-                'order': '点歌',
+                home: '主页',
+                order: '点歌',
                 player: '播放',
                 profile: '我的',
+                admin: '管理',
+                debug: '调试',
             },
             msg_box: {
                 password_error: '密码错误。',
@@ -49,16 +53,21 @@ class App {
                 check_file_too_big: '选择的文件过大。',
                 name_not_found: '用户名不存在。',
                 id_not_found: 'ID不存在。',
+                cant_self: '不可以操作自己。',
                 bad_request: '错误的请求。',
                 please_select_file: '请选择文件。',
                 please_input: '请输入内容。',
                 not_support_file: '不支持的文件类型。',
                 logging: '登入中...',
+                no_permissions: '没有权限。',
                 confirm_logout: '确定登出吗？',
+                confirm_del_user: '确定要删除该用户吗？',
                 change_avatar_finish: '更改头像成功。',
                 change_name_finish: '更改名称成功。',
                 register_user_finish: '注册用户成功。',
                 password_mismatch: '两次密码不一致。',
+                initializing: '正在初始化中...',
+                operate_requesting: '操作请求中...',
 
                 // title
                 login_fail: '登入失败',
@@ -73,6 +82,11 @@ class App {
                 all_number: '不允许全部使用数字。',
                 name_have_special_char: '不允许包含特殊字符。',
                 is_repeat: '信息重复。',
+            },
+            item: {
+                'admin': '管理员',
+                'order': '点歌者',
+                'playing': '播放者',
             }
         }
     }
@@ -112,6 +126,8 @@ class App {
                 avatar: this.getMetaData('avatar'),
                 /**用户名 */
                 name: this.getMetaData('name'),
+                /**是否有管理员权限 */
+                have_admin: this.getMetaData('have_admin') ? 'have' : undefined,
                 /**网页头部显示用户信息的元素 */
                 element: {
                     /**@type {null | Element} */
@@ -189,10 +205,28 @@ class App {
     /**
      * 使用服务端API与其通讯
      * @param {object} data 传入对象
-     * @param {function(object)=} callback 传入回调函数
+     * @param {function({valid: boolean, message: string, data: object})} callback 传入回调函数
+     * @param {function(null | {valid: false, message: string, data: object})=} errCallback 出现错误的回调函数
      */
-    useAPI(data, callback) {
-        this.makeFetch('POST', this.api_url, data, callback)
+    useAPI(data, callback, errCallback) {
+        if (this.debug_mode) log('useAPI req data:', data)
+        const onErr = (res_data) => {
+            if (typeof errCallback !== 'function') return
+            errCallback(res_data)
+        }
+        this.makeFetch('POST', this.api_url, data, (res_data) => {
+            if (!res_data) {
+                app.errorBox(msgBoxText('bad_request'))
+                onErr(res_data)
+                return
+            }
+            if (!res_data.valid) {
+                app.errorBox(msgBoxText(res_data.message))
+                onErr(res_data)
+                return
+            }
+            callback(res_data)
+        })
     }
 
     /**
@@ -234,6 +268,15 @@ class App {
         time -= 1
         timeout()
     }
+    
+    /**
+     * 将时间戳转换为可读样式
+     * @param {number} time 
+     */
+    static toStrTime(time) {
+        const date = new Date(time)
+        return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}.${String(date.getSeconds()).padStart(2, '0')}`
+    }
 
 
     // 工具函数-路径相关
@@ -274,12 +317,26 @@ class App {
         return value ? value : key
     }
 
+    // 工具函数-对象
+
+    /**
+     * 遍历一个对象
+     * @param {object} obj 传入对象
+     * @param {function(string, any)} callback 
+     */
+    forEachObject(obj, callback) {
+        Object.keys(obj).forEach((key) => {
+            const value = obj[key]
+            callback(key, value)
+        })
+    }
+
 
 
 
     // 工具函数-dom相关
     /**
-     * 获取从HTML模板渲染引擎获得的值
+     * (DOM)获取从HTML模板渲染引擎获得的值
      * @param {string} meta_name meta的name属性
      */
     getMetaData(meta_name) {
@@ -290,23 +347,44 @@ class App {
     }
 
     /**
-     * (document.createElement)创建一个元素
+     * (DOM)(document.createElement)创建一个元素
      * @param {string} tag_name 传入标签名
      * @param {Object.<string, string>} tag_attrib 标签的属性
-     * @param {string} tag_content 标签内容
+     * @param {string | number | function(MouseEvent)} cont_or_func 标签内容, 或点击事件的回调函数
+     * @param {number | string} [bool_or_str] 指定为true将tag_content(时间戳)的值转换为可读的字符串样式; `cont_or_func`如果是function, 此值指定为字符串会将标签内容指定为此值
      */
-    createElement(tag_name, tag_attrib = {}, tag_content = '') {
+    createElement(tag_name, tag_attrib = {}, cont_or_func = '', bool_or_str = false) {
         const element = document.createElement(tag_name)
         Object.keys(tag_attrib).forEach((name) => {
             const value = tag_attrib[name]
             element.setAttribute(name, value)
         })
-        element.innerHTML = tag_content
+
+        const setInnerHtml = value => element.innerHTML = value
+
+        switch (typeof cont_or_func) {
+            case 'string':
+                setInnerHtml(cont_or_func)
+                break
+            case 'number':
+                if (!bool_or_str) setInnerHtml(cont_or_func)
+                setInnerHtml(App.toStrTime(cont_or_func))
+                break
+            case 'function':
+                element.addEventListener('click', (event) => {
+                    cont_or_func(event)
+                })
+                if (typeof bool_or_str === 'string') {
+                    element.innerHTML = bool_or_str
+                }
+            default:
+                break
+        }
         return element
     }
 
     /**
-     * 禁用一个DOM元素(强制设置disabled值)
+     * (DOM)禁用一个DOM元素(强制设置disabled值)
      * @param {Element} element 传入元素
      * @param {boolean} is_disabled 是否禁用
      */
@@ -322,11 +400,14 @@ class App {
     }
 
     /**
-     * (Element.appendChild)组合元素
+     * (DOM)(Element.appendChild)组合元素
      * @param {Element} root_element 根(父)元素
-     * @param {Array.<Element> | Object.<string, Element>} child_elements 子元素
+     * @param {Array.<Element> | Object.<string, Element> | Element} child_elements 子元素
      */
     joinElement(root_element, child_elements) {
+        if (child_elements instanceof Element) {
+            return root_element.appendChild(child_elements)
+        }
         if (!(child_elements instanceof Array)) child_elements = Object.values(child_elements)
         child_elements.forEach((element) => {
             if (!(element instanceof Element)) return
@@ -335,7 +416,7 @@ class App {
     }
 
     /**
-     * 判断一个元素是否包含某个类名
+     * (DOM)判断一个元素是否包含某个类名
      * @param {Element} element 
      * @param {string} class_name 
      */
@@ -348,6 +429,46 @@ class App {
         })
         return is_have
     }
+
+    /**
+     * (DOM)获取一个属性内容的列表
+     * @param {Element} element 
+     * @param {string} attrib_name 属性名
+     */
+    getAttributeList(element, attrib_name) {
+        const attrib_value = element.getAttribute(attrib_name)
+        return attrib_value.split(' ')
+    }
+
+    /**
+     * (DOM)向属性值后添加一个新的属性
+     * @param {Element} element 
+     * @param {string} attrib_name 属性名
+     * @param {string} attrib_value 属性值
+     */
+    addAttributeValue(element, attrib_name, attrib_value) {
+        const attrib_list = this.getAttributeList(element, attrib_name)
+        attrib_list.push(attrib_value)
+        const value = attrib_list.join(' ')
+
+        element.setAttribute(attrib_name, value)
+        return 
+    }
+
+    /**
+     * (DOM)向属性值后删除一个属性
+     * @param {Element} element 
+     * @param {string} attrib_name 属性名
+     * @param {string} attrib_value 属性值
+     */
+    removeAttributeValue(element, attrib_name, attrib_value) {
+        const attrib_list = this.getAttributeList(element, attrib_name)
+        const value = attrib_list.filter(value => value !== attrib_value).join(' ')
+
+        element.setAttribute(attrib_name, value)
+        return 
+    }
+    
 
 
 
@@ -615,6 +736,7 @@ class App {
         // 获取用户信息
         const user_avatar = this.user.avatar
         const user_name = this.user.name
+        const have_admin = this.user.have_admin
 
         // 预创建内容
         const e_logo = create('img', { // logo在用户未登入的情况是, 但登入之后会被替换为用户头像
@@ -630,16 +752,18 @@ class App {
 
         // (TSK) 将menu的search栏完善: 做好窄屏与宽屏的适配
         // menu_search 后需要添加到menu内 在添加近之前需要对元素进行整合
-        const e_menu_search = create('div', {class: 'lien'}) // 这个是menu_search的根
-        const menu_search = [
-            create()
-        ]
+        // const e_menu_search = create('div', {class: 'lien'}) // 这个是menu_search的根
+        // const menu_search = [
+        //     create()
+        // ]
+
 
         const menu = [ // /(TAG)导航栏菜单/
             create('div', { class: 'button logo' }, title), // 移动端菜单头部内容
-            e_menu_search, // 搜索框
+            // e_menu_search, // 搜索框
 
             createMenuItem(pageNameText('home'), '/', 'icon-home'),
+            createMenuItem(pageNameText('admin'), '/admin', 'icon-admin', !have_admin),
             createMenuItem(pageNameText('profile'), '/profile', 'icon-user'),
             createMenuItem(pageNameText('order'), '/order', 'icon-order'),
             createMenuItem(pageNameText('player'), '/player', 'icon-player'),
@@ -681,9 +805,13 @@ const app = new App()
 // init ref
 const text = (type, key) => app.getText(type, key)
 const msgBoxText = key => text('msg_box', key)
+const itemText = key => text('item', key)
 const serverText = key => text('server', key)
 const pageNameText = key => text('page_name', key)
 const log = console.log
+
+const createElement = app.createElement
+const join = app.joinElement
 
 
 // init page...

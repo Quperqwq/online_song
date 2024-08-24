@@ -4,10 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{ __html_head }}
-    
+    <link rel="stylesheet" href="/src/page-player.css">
     <title>Song Player</title>
 </head>
 <body>
+    <nav id="page-nav" class="hidden"></nav>
+
+    <main>
+        <section class="list">
+            <h2>
+                <span>播放列表</span>
+            </h2>
+            <section class="no-scroll-bar">
+                <ol id="play-list">
+                    <li data-style="show">
+                        <article class="info">
+                            <span class="number"> 1 </span>
+                            <img class="avatar" src="/src/avatar/10001.jpg" alt="user avatar">
+                            <span class="name"> UserName </span>
+                        </article>
+                        <article class="item">
+                            <span class="title"> 歌曲标题 </span>
+                            <span class="singer"> 歌手 </span>
+                        </article>
+                    </li>
+                    <li data-style="show">
+                        <article class="info">
+                            <span class="number"> 2 </span>
+                            <img class="avatar" src="/src/avatar/10001.jpg" alt="user avatar">
+                            <span class="name"> UserName </span>
+                        </article>
+                        <article class="item">
+                            <span class="title"> 歌曲标题 </span>
+                            <span class="singer"> 歌手 </span>
+                        </article>
+                    </li>
+                </ol>
+            </section>
+        </section>
     
+        <section class="player" style="--image-url: url('/src/test.webp');">
+            <div class="background"></div>
+            <div class="progress" id="song-progress" style="--progress: 14%;">
+                <div class="content"></div>
+            </div>
+            <div class="info">
+                <h2 class="title" id="song-title"> 歌曲名 </h2>
+                <span class="order" id="song-order"> 点歌人 </span>
+                <span class="singer" id="song-singer"> 歌手 </span>
+            </div>
+            <div class="lyric no-scroll-bar">
+                <ul id="lyric-list">
+                    <li class="now"> 初始化... </li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <section id="msg-box"></section>
+    <script src="/src/page-player.js"></script>
 </body>
 </html>
