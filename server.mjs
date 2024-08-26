@@ -298,7 +298,7 @@ httpApp.post('/api', (req, res) => {
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
             if (!app.checkRole(user, res, 'order')) return
             user.order({
-                'cover': req_data.cover,
+                'cover': valid(req_data.cover, config.normal_cover_url),
                 'singer': req_data.singer,
                 'src': req_data.src,
                 'time': req_data.time,
@@ -344,13 +344,13 @@ httpApp.post('/api', (req, res) => {
             endReq()
             return
         },
-        // 获取歌曲列表(FIX)
+        // 获取歌曲列表
         'get_song_list': () => {
             if (!isLogin()) return
             if (!app.checkRole(user, res, 'playing')) return
 
-            // (FIX) 无法正常地返回预期值
-            res_data.data.list = user.list
+            const play_list = Player.list
+            res_data.data.list = play_list ? play_list : []
             endReq()
             return
         },

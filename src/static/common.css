@@ -262,3 +262,21 @@ nav#page-nav .brand .avatar, .avatar {
         filter: brightness(1.2);
     }
 }
+
+@keyframes blink-dark {
+    0% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(.8);
+    }
+}
+
+@keyframes show {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}

@@ -1,5 +1,6 @@
 body {
     padding: 0;
+    overflow: hidden;
 }
 
 main {
@@ -33,10 +34,6 @@ main {
     margin: 0 1em;
 }
 
-#play-list [data-style="hidden"] {
-    transition: all .2s;
-    transform: scale(0);
-}
 
 #play-list {
     margin: 0;
@@ -44,6 +41,12 @@ main {
     position: relative;
     z-index: 1;
     padding-bottom: 3em;
+
+    animation: show .5s;
+}
+
+#play-list [data-style="hidden"] {
+    transform: scale(0);
 }
 
 #play-list li {
@@ -62,6 +65,11 @@ main {
 /* #play-list li:not(:first-child) {
     margin-top: .2em;
 } */
+
+#play-list li.now {
+    /* background-color: #fff; */
+    animation: blink-dark 1.8s infinite;
+}
 
 #play-list li article {
     text-wrap: nowrap;
@@ -90,6 +98,7 @@ main {
 
 #play-list li .info .number::before {
     content: '#';
+    margin-right: .2em;
 }
 
 #play-list li .info img {
@@ -145,7 +154,7 @@ main {
     position: relative;
     width: var(--progress);
     height: var(--progress-height);
-    background-color: #72ffd3;
+    background-color: #1effb9;
     box-shadow: 0 0 8px 0px #bbb;
 }
 
@@ -225,6 +234,14 @@ main {
 .player .order {
     background-color: #999;
     margin-right: .3em;
+}
+
+.player .order::before {
+    content: '点歌:';
+}
+
+.player .singer::before {
+    content: '歌手:';
 }
 
 

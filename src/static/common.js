@@ -1,10 +1,22 @@
+/**
+ * @typedef {import('../../types').SongList} SongList
+ */
+
 // init function
 const valid = (value, normal) => { return value ? value : normal }
 /**
- * [简](document.getElementById)获取页面的元素
+ * [简]\(document.getElementById)获取页面的元素
  * @param {string} id_name 传入ID name
+ * @returns {Element}
  */
-const getEBI = (id_name) => {return document.getElementById(id_name)}
+const getEBI = (id_name) => {
+    const element = document.getElementById(id_name)
+    if (!element) {
+        if (!app.is_init) return console.error(`get element by id '${id_name}' error`)
+        app.errorBox(msgBoxText('get_element_fail' + `\n${id_name}`))
+    }
+    return element
+}
 
 
 // definition class
@@ -68,6 +80,7 @@ class App {
                 password_mismatch: '两次密码不一致。',
                 initializing: '正在初始化中...',
                 operate_requesting: '操作请求中...',
+                get_element_fail: '获取元素失败。',
 
                 // title
                 login_fail: '登入失败',
@@ -108,8 +121,10 @@ class App {
         /**点击事件的回调函数 */
         this.eventCallbacks = {
             msg_box: {
-                yes: () => {},
-                no: () => {}
+                /**@type {undefined | function} */
+                yes: undefined,
+                /**@type {undefined | function} */
+                no: undefined,
             }
         }
         this.init_err_list = []
@@ -151,10 +166,15 @@ class App {
     /**
      * 监听`App`初始化完成
      * @param {function(Array.<string> | undefined)} callback 回调函数, 传入初始化时错误信息
+     * @param {boolean} [need_click = false] 是否需要用户确认(通常需要让用户先互动的页面启用)
      */
-    listenInit(callback) {
+    listenInit(callback, need_click = false) {
         this._initCallback = () => {
             const err = this.init_err_list
+            if (need_click) {
+                this.msgBox('info', 'please click', 'info', true, callback)
+                return
+            }
             callback(err.length ? err : undefined)
         }
         return
@@ -168,11 +188,12 @@ class App {
      * @param {string} url 请求的URL
      * @param {object} data 请求体(对象)
      * @param {function(object | null)} callback 回调函数,传入响应体; 如果未传入该参数将会返回响应JSON结果
+     * @param {function(any)} [errCallback] 出现错误时调用此函数
      * 
      */
-    makeFetch(method = 'GET', url = '', data, callback) {
+    makeFetch(method = 'GET', url = '', data, callback, errCallback) {
         if (!method | !url | !data | !callback) { // 未传入任意参数将报错
-            console.error()
+            console.error('missing param')
             return
         }
 
@@ -187,7 +208,9 @@ class App {
                 // 检查响应是否成功
                 if (response.ok) {
                     // 尝试将响应体解析为 JSON
-                    return response.json().catch(() => ({}))
+                    const res_data = response.json().catch(() => ({}))
+                    if (this.debug_mode) log('(API)res data:', res_data)
+                    return res_data
                 } else {
                     // 如果响应不成功,返回一个空对象
                     return {}
@@ -198,6 +221,10 @@ class App {
             })
             .catch((error) => { // 处理错误
                 console.error(error)
+                if (typeof errCallback === 'function') {
+                    errCallback(error)
+                    return
+                }
                 return callback(null)
             })
     }
@@ -209,7 +236,7 @@ class App {
      * @param {function(null | {valid: false, message: string, data: object})=} errCallback 出现错误的回调函数
      */
     useAPI(data, callback, errCallback) {
-        if (this.debug_mode) log('useAPI req data:', data)
+        if (this.debug_mode) log('(API)useAPI req data:', data)
         const onErr = (res_data) => {
             if (typeof errCallback !== 'function') return
             errCallback(res_data)
@@ -226,6 +253,9 @@ class App {
                 return
             }
             callback(res_data)
+        }, (error) => {
+            app.errorBox(error)
+            onErr(error)
         })
     }
 
@@ -367,7 +397,10 @@ class App {
                 setInnerHtml(cont_or_func)
                 break
             case 'number':
-                if (!bool_or_str) setInnerHtml(cont_or_func)
+                if (!bool_or_str) {
+                    setInnerHtml(cont_or_func)
+                    break
+                }
                 setInnerHtml(App.toStrTime(cont_or_func))
                 break
             case 'function':
@@ -564,12 +597,20 @@ class App {
         _footer.cancel.addEventListener('click', () => {
             this.lockMsgBox(false)
             this.lockMsgBoxButton(true)
-            _callback.no(false)
+            const callback = _callback.no
+            if (typeof callback === 'function') {
+                callback(false)
+                _callback.no = undefined // 调用过后销毁
+            }
         })
         _footer.success.addEventListener('click', () => {
             this.lockMsgBox(false)
             this.lockMsgBoxButton(true)
-            _callback.yes(true)
+            const callback = _callback.yes
+            if (typeof callback === 'function') {
+                callback(true)
+                _callback.yes = undefined
+            }
         })
 
         this.elems_msg_box_all = _box
@@ -637,6 +678,11 @@ class App {
 
         if (is_msg) { // message样式
             es.root.setAttribute('data-style', 'message')
+
+            if (typeof callback === 'function') {
+                const _callback = this.eventCallbacks.msg_box
+                _callback.yes = callback
+            }
         } else { // confirm样式
             es.root.setAttribute('data-style', 'confirm')
 
@@ -797,6 +843,109 @@ class App {
         return ''
     }
 }
+
+class Lyric {
+    /**
+     * 构建一个歌词类
+     * @param {string} lyric_str 传入歌词
+     * @param {string} [sub_lyric_str] 传入副歌词
+     */
+    constructor(lyric_str, sub_lyric_str) {
+        /**
+         * 歌词内容
+         * @typedef {Object.<number, string>} lyricItem 歌词内容
+         * @type {[lyricItem, lyricItem | undefined]}
+         */
+        this.lyrics = [this.getList(lyric_str)]
+        if (sub_lyric_str) this.lyrics[1] = this.getList(sub_lyric_str)
+
+        
+    }
+
+    /**
+     * 格式化歌词, 获取歌词列表
+     * @param {string} lyric_str 传入歌词
+     */
+    getList(lyric_str) {
+        /**原始内容 */
+        const org_list = lyric_str.split('\n')
+        /**处理后的内容 @type {Object.<number, string>} */
+        const list = {}
+
+
+        org_list.forEach((lyric_item) => {
+            // `[tag_data]string...` => `[tag_data]`
+            const _tag = lyric_item.match(/\[([^\]]+)\]/g)
+            // `[tag_data]string...` => [`string...`] | null
+            const str_items = lyric_item.match(/(?<=\][^\[]*)[^\[]*$/)
+            // [`string...`] => `string...` | null => ``
+            const str = str_items ? str_items[0] : ''
+            // tag:null => return
+            if (!_tag) return
+            // `[tag_data]` => `tag_data`
+            const tag = _tag.map((item => item.slice(1, -1)))
+            // ...tag
+            tag.forEach((tag_item) => {
+                // `key:value` => ['key', 'value']
+                const tag_data = tag_item.split(':')
+                const tag_key = tag_data[0] // lyric 标准格式的 id tag,
+                const tag_value = tag_data[1]
+                // `123` => 123 | `by` => NaN
+                // 在是ID-tags时为NaN, 在Time-tag时为number
+                const time_min = +tag_key
+                if (!isNaN(time_min)) {
+                    // 是Time-tag
+                    const time_sec = +tag_value
+                    const time = (time_min * 60) + time_sec
+                    // push
+                    list[time] = str
+                }
+                // 处理ID-tags
+
+            })
+        })
+
+        return list
+    }
+
+    /**
+     * 获取当前时间对应的歌词
+     * @param {number} now_time 当前播放时间
+     */
+    get(now_time) {
+        const output = []
+        // 处理歌词
+        this.lyrics.forEach((lyric, index) => {
+            const setOutput = value => output[index] = value
+            let lyric_time = 0
+            // {123.45: `content...`, ...} => [123.45, ...]
+            const axis = Object.keys(lyric)
+            // forEach不支持中途退出, 改用传统for循环
+            // axis.forEach((time) => {
+            //     if (now_time >= time) {
+            //     }
+            // })
+
+            // 此表达式下歌词为空
+            if (axis[0] > now_time) return setOutput('')
+            
+            let _last_time = 0
+            // [123.45, ...] => for(123.45); ...
+            for (const time of axis) {
+                // log('now:', now_time, '>', 'time:', time, 'cont:', lyric[time])
+                if (now_time > time) {
+                    _last_time = time
+                    continue
+                }
+                lyric_time = _last_time
+                break
+            }
+            setOutput(lyric[lyric_time])
+        })
+        return output
+    }
+}
+
 
 
 // init object

@@ -13,7 +13,6 @@ const es_main = {
 
 app.listenInit(() => {
     // button
-    log('ok')
     const es_control = es_main.control
     const e_table = es_main.table.root
     const e_table_body = es_main.table.body
@@ -91,7 +90,6 @@ app.listenInit(() => {
                         app.disabledElement(target, true)
                         app.waitBox(true, msgBoxText('operate_requesting'))
                         const endReq = () => {
-                            app.waitBox(false)
                             app.disabledElement(target, false)
                         }
 
@@ -102,9 +100,10 @@ app.listenInit(() => {
                             'target': type,
                             'value': is_checked
                         }, () => {
+                            app.waitBox(false)
                             endReq()
                         }, // ok
-                        (res_data) => { // error
+                        () => { // error
                             endReq()
                             target.checked = !is_checked
                         })

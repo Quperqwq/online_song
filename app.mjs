@@ -7,6 +7,16 @@ import mime from 'mime' // 文件mime类型
 import crypto from 'crypto'
 
 
+/**
+ * @typedef {import('./types').UserInfo} UserInfo 关于用户
+ * @typedef {import('./types').SongItem} SongItem 单曲信息
+ * @typedef {import('./types').SongListData} SongData 歌曲列表
+ * @typedef {import('./types').UserFileContent} UserFileContent 用户文件内容
+ * 
+ */
+
+
+
 // 初始化常量
 const __dirname = process.cwd()
 const __salt = '3d93bbd10a66ea6ad85bc39434c5f677' // 定义特征值用于对token生成的唯一性
@@ -938,24 +948,6 @@ class App {
 export class Player {
     list = []
     /**
-     * @typedef {Object} Song
-     * @property {SongData} data
-     * @property {SongInfo} info
-     * 
-     * @typedef {Object} SongData - 歌曲数据
-     * @property {string} title - 歌曲标题
-     * @property {string} src - 歌曲源
-     * @property {string | null} singer - 歌曲歌手
-     * @property {string | null} cover - 歌曲封面源
-     * @property {number} time - 歌曲总时长(秒)
-     * @property {number | null} lyric - 歌曲歌词内容
-     * 
-     * @typedef {Object} SongInfo - 点歌相关信息
-     * @property {number} id - 歌曲ID
-     * @property {string} name - 点歌人
-     * @property {number} ctime - 点歌时间
-     */
-    /**
      * 构建一个播放器
      * @param {boolean} local_mode 是否启用本地模式(本地模式将缓存歌曲URL)
      * @param {string} static_path 缓存音乐存放路径
@@ -984,10 +976,10 @@ export class Player {
      * @param {SongData} song_data 传入歌曲信息
      * 
      * @param {function(string)=} callback 当为local_mode的时候会调用callback返回是否成功
-     * @param {string} order_name 传入点歌者信息
+     * @param {User} user 传入点歌者实例
      * @returns {string | undefined} 返回错误信息, 若没有问题则会为空字符串
      */
-    push(song_data, order_name, callback) {
+    push(song_data, user, callback) {
         const returns = (value) => { return this.local_mode ? callback(value) : value }
         const valid = (value, normal = null) => { return value ? value : normal }
         if (!(song_data.title && song_data.src)) { // 检查必要参数
@@ -998,7 +990,7 @@ export class Player {
             if (!Player.list) Player.list = []
             // app.log(Player.list)
             const song_id = Player.list.length
-            /**@type {Song} */
+            /**@type {SongItem} */
             const push_data = {
                 data: {
                     'cover': valid(song_data.cover),
@@ -1010,10 +1002,16 @@ export class Player {
                 },
                 info: {
                     'id': song_id,
-                    'name': valid(order_name),
-                    'ctime': app.getTime()
+                    'time': app.getTime()
+                },
+                order: {
+                    'name': valid(user.profile.name),
+                    'uid': valid(user.profile.id, -1),
+                    'avatar': valid(user.profile.avatar, config.normal_avatar),
                 }
             }
+
+
             Player.list.push(push_data) // 将播放歌曲的信息push到Player.list对象中
             // 打印新歌信息
             app.info('push_song', app.objToStr(push_data.data, { title: `song_data[${song_id}]` }), song_id, push_data.info.name)
@@ -1043,6 +1041,63 @@ export class Player {
         }
 
     }
+    // push(song_data, order_name, callback) {
+    //     const returns = (value) => { return this.local_mode ? callback(value) : value }
+    //     const valid = (value, normal = null) => { return value ? value : normal }
+    //     if (!(song_data.title && song_data.src)) { // 检查必要参数
+    //         app.warn('missing_param', this.push.name, song_data)
+    //         return returns('missing_param')
+    //     }
+    //     const push = () => { // 临时定义函数用于兼容异步函数
+    //         if (!Player.list) Player.list = []
+    //         // app.log(Player.list)
+    //         const song_id = Player.list.length
+    //         /**@type {Song} */
+    //         const push_data = {
+    //             data: {
+    //                 'cover': valid(song_data.cover),
+    //                 'singer': valid(song_data.singer),
+    //                 'src': song_src,
+    //                 'time': valid(song_data.time, 0),
+    //                 'title': song_data.title,
+    //                 'lyric': valid(song_data.lyric)
+    //             },
+    //             info: {
+    //                 'id': song_id,
+    //                 'name': valid(order_name),
+    //                 'ctime': app.getTime()
+    //             },
+    //             order: {}
+    //         }
+    //         Player.list.push(push_data) // 将播放歌曲的信息push到Player.list对象中
+    //         // 打印新歌信息
+    //         app.info('push_song', app.objToStr(push_data.data, { title: `song_data[${song_id}]` }), song_id, push_data.info.name)
+    //     }
+
+
+    //     let song_src = song_data.src
+    //     if (this.local_mode) { // 如果是本地模式先将远程文件保存到文件系统
+    //         if (!callback) throw app.throwError('error_value_is_invalid', callback)
+    //         app.debug('Player: local mode, download music.')
+    //         app.downloadFile({
+    //             'download_path': this.static_path,
+    //             'ext_name': 'mp3',
+    //             'url': song_src
+    //         }, (hash) => {
+    //             if (!hash) { // 如果无效
+    //                 return callback('url_is_invalid')
+    //             }
+    //             song_src = this.static_url + '/' + hash + '.mp3'
+    //             // app.log(song_src)
+    //             push()
+    //             return callback('')
+    //         })
+    //     } else { // 如果非本地模式直接添加
+    //         push()
+    //         return returns('')
+    //     }
+
+    // }
 
     /**
      * 检查该源是否存在于播放列表中
@@ -1085,53 +1140,7 @@ export class Player {
 export class User extends Player {
     /**登入有效时间 */
     login_valid_time = config.login_valid_time
-    /**
-     * @typedef {Object} UserFileContent 注册用户文件内容
-     * @property {Object<number, UserData>} users 所有注册用户数据
-     * @property {UserFileInfoContent} info 关于注册用户文件或UID信息
-     * @property {Object<number, UserLogin>} login 所有注册用户登入信息
-     * 
-     * @typedef {Object} UserFileInfoContent
-     * @property {string} ver 文件版本
-     * @property {number} ctime 文件创建时间
-     * @property {number} mtime 文件上次修改时间
-     * @property {number} last_uid 上一个用户的UID(通常用于注册新用户)
-     * 
-     * 
-     * 
-     * @typedef {Object} UserLogin
-     * @property {string} token 登入凭证;区别于`UserData.verify.token`,该值适用于验证客户端的用户凭证
-     * @property {string} slat 随机值
-     * @property {number} id 用户ID
-     * @property {number} time 登入时间
-     * 
-     * @typedef {Object} UserData User类内存储用户信息的标准格式
-     * @property {UserProfile} profile
-     * @property {UserVerify} verify
-     * @property {UserRole} role
-     * @property {UserInfo} info
-     * 
-     * @typedef {Object} UserProfile 用户信息
-     * @property {string} name 昵称
-     * @property {string | undefined} password 密码
-     * @property {string | null} email 邮箱
-     * @property {string | null} avatar 头像地址
-     * @property {number} id UID
-     * 
-     * @typedef {Object} UserVerify 用户验证信息相关
-     * @property {string} token 用户身份验证信息; 区别于`UserLogin.token`,该值是用于校验密码和账户是否一致
-     * @property {string} salt 随机值
-     * 
-     * @typedef {Object} UserRole 用户权限
-     * @property {boolean} playing 
-     * @property {boolean} order 
-     * @property {boolean} admin 
-     * 
-     * @typedef {Object} UserInfo 关于用户
-     * @property {number} ctime 创建时间
-     * @property {number} mtime 修改时间时间
-     * @property {number} login_time 上次登入时间(非临时登入)
-     */
+
     /**
      * 构建一个User类
      * @param {object} param0 用户信息
@@ -1611,7 +1620,7 @@ export class User extends Player {
 
         if (!(this.is_login || this.is_guest)) return returns('not_login')
         if (!this.user_data.role.order) return returns('not_role')
-        return this.push(song_data, this.profile.name, returns('_func'))
+        return this.push(song_data, this, returns('_func'))
     }
 
     /**
@@ -1682,7 +1691,7 @@ export class User extends Player {
     /**
      * (admin user)更改指定用户的角色
      * @param {number} target_id 目标用户的ID
-     * @param {UserRole} role_name 角色名
+     * @param {string} role_name 角色名
      * @param {boolean} role_value 角色名对应的值
      */
     changeRole(target_id, role_name, role_value) {
