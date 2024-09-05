@@ -17,18 +17,19 @@ const player = new Audio()
 log(es_main)
 
 
-// (TSK) 把`app.listenInit`第二个参数启用用户确认再执行的逻辑改一下, 每完成一次点击就销毁函数会导致调试时无法定位代码; 待测试Lyric的DOM生成
 app.listenInit(() => {
     let main_loop
     let player_loop
     /**本页面当前的播放列表 @type {SongList} */
-    const this_list = []
+    let this_list = []
     /**播放列表DOM元素 @type {PlayerList} */
-    const es_this_list = []
+    let es_this_list = []
     /**播放列表的歌词类 @type {(Lyric|null)[]} */
-    const lyric_this_list = []
+    let lyric_this_list = []
     /**当前歌曲的歌词DOM元素 @type {Object.<number, Element>} */
-    const es_now_lyric = {}
+    let es_now_lyric = {}
+    /**当前歌曲的对象 @type {Lyric | null} */
+    let now_lyric = null
     /**当前播放歌曲的索引 */
     let now_index = -1
     /**
@@ -134,7 +135,7 @@ app.listenInit(() => {
             // create - item(song info)
             const es_item = {
                 'title': createElement('span', {class: 'title'}, song_data.title),
-                'singer': createElement('span', {class: 'title'}, song_data.singer),
+                'singer': createElement('span', {class: 'singer'}, song_data.singer),
             }
             const e_item = createElement('article', {class: 'item'})
             join(e_item, es_item)
@@ -151,6 +152,11 @@ app.listenInit(() => {
 
             // init lyric
             lyric_this_list.push(song_lyric ? new Lyric(song_lyric) : null)
+
+            // check player
+            if (player.ended) {
+                switchSong()
+            }
         })
 
     }
@@ -178,9 +184,9 @@ app.listenInit(() => {
         // set style
         const e_now_root = elem_now_item.root
         if (elem_last_item) elem_last_item.root.classList.remove('now')
-        log(elem_now_item)
+        // log(elem_now_item)
         e_now_root.classList.add('now')
-        e_now_root.scrollBy()
+        e_now_root.scrollIntoView()
 
         // set audio
         player.src = song_item.data.src
@@ -192,13 +198,15 @@ app.listenInit(() => {
 
 
 
-        // lyric
+        // lyric - init
         const e_lyric = es_main.lyric_lits
         e_lyric.innerHTML = ''
-        es_now_lyric = []
+        es_now_lyric = {}
+        now_lyric = null
         // lyric - have
         if (lyric) {
             // update lyric
+            now_lyric = lyric
             lyric.lyrics.forEach((lyric_item) => {
                 app.forEachObject(lyric_item, (key, value) => {
                     es_now_lyric[key] = createElement('li', {}, value)
@@ -206,15 +214,36 @@ app.listenInit(() => {
             })
 
             join(e_lyric, es_now_lyric)
+            log('init:', es_now_lyric)
         }
     }
 
+    /**已设置lyric样式的列表 @type {Element[]} */
+    let es_lyric_set_style = []
+    /**设置当前歌词位置的 @param {number} time */
+    const setLyricNow = (time) => {
+        es_lyric_set_style.forEach((e_last) => {
+            e_last.classList.remove('now')
+        })
+        es_lyric_set_style = []
 
+        // log('use:', es_now_lyric)
+        const now_lyric_time = now_lyric.get(time)
+        const e_now_lyric = es_now_lyric[now_lyric_time]
+        if (!e_now_lyric) return
+        e_now_lyric.scrollIntoView()
+        e_now_lyric.classList.add('now')
+        es_lyric_set_style.push(e_now_lyric)
+    }
     /**刷新播放器内容(如进度条) */
     const refreshPlayer = () => {
         const current = player.currentTime
         const duration = player.duration
         const progress = (current / duration) * 100
+        if (now_lyric) {
+            // have lyric
+            setLyricNow(current)
+        }
 
         es_main.playing.progress.setAttribute('style', `--progress: ${progress}%`)
     }

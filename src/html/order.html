@@ -4,15 +4,109 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{ __html_head }}
-
+    <link rel="stylesheet" href="/src/page-order.css">
     
     <title> Order The Song </title>
 </head>
 <body>
     <nav id="page-nav"></nav>
 
+    <main>
+        <section class="control">
+            <section id="top" class="search">
+                <input id="search-input" placeholder="输入关键词以搜索..." type="text" title="search song">
+                <button id="search-submit" class="icon-search no-margin" type="button" title="start search"></button>
+            </section>
+            <section class="preview" data-style="show">
+                <h3>
+                    当前试听<span id="preview-title">--</span>
+                </h3>
+                <audio src="" controls></audio>
+            </section>
+        </section>
 
+
+        <table class="list">
+            <thead>
+                <tr>
+                    <th class="title"> 歌曲名 </th>
+                    <th class="singer"> 歌手 </th>
+                    <th class="play"> 试听 </th>
+                </tr>
+            </thead>
+            <tbody id="search-table">
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+                <tr> 
+                    <td class="title">title</td>
+                    <td class="singer">name</td>
+                    <td class="play"><button type="button" class="icon-play no-margin success"></button></td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+
+    <!-- (TSK)返回顶部按钮复用化 -->
     
     <section id="msg-box"></section>
+    <script src="/src/page-order.js"></script>
 </body>
 </html>

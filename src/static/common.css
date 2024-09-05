@@ -28,6 +28,22 @@ ul {
     list-style: none;
 }
 
+
+table button {
+    font-size: .8em;
+    /* margin: 0; */
+}
+
+table th:first-child {
+    border-top-left-radius: .2em;
+}
+
+table th:last-child {
+    border-top-right-radius: .2em;
+}
+
+
+
 /* 一行显示的lits */
 .row-list {
     padding: 0;
@@ -96,6 +112,21 @@ ul {
     /* padding: 0 1em; */
 }
 
+
+.float-left {
+    float: left;
+}
+
+.float-left::after,
+.float-right::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+.float-right {
+    float: right;
+}
 
 
 
@@ -223,7 +254,7 @@ nav#page-nav .brand .avatar, .avatar {
 .icon-menu::before { content: '\e9bd';}
 .icon-home::before {content: '\e900';}
 .icon-order::before {content: '\ea0a';}
-.icon-player::before {content: '\ea15';}
+.icon-player::before, .icon-play::before {content: '\ea15';}
 .icon-user::before,.icon-login::before {content: '\e971';}
 .icon-debug::before {content: '\e999';}
 .icon-password::before {content: '\e98d';}
@@ -238,6 +269,12 @@ nav#page-nav .brand .avatar, .avatar {
 .icon-hidden::before {content: '\e9d1';}
 .icon-del::before {content: '\e9ac';}
 .icon-admin::before, .icon-users::before {content: '\e972';}
+.icon-search::before {content: '\e986';}
+
+
+[class*="icon-"].no-margin::before {
+    margin: 0;
+}
 
 
 

@@ -120,12 +120,8 @@ class App {
         }
         /**点击事件的回调函数 */
         this.eventCallbacks = {
-            msg_box: {
-                /**@type {undefined | function} */
-                yes: undefined,
-                /**@type {undefined | function} */
-                no: undefined,
-            }
+            /**@type {undefined | function} */
+            msgBox: undefined
         }
         this.init_err_list = []
 
@@ -173,6 +169,7 @@ class App {
             const err = this.init_err_list
             if (need_click) {
                 this.msgBox('info', 'please click', 'info', true, callback)
+                // this.msgBox('info', 'please click', 'info', true)
                 return
             }
             callback(err.length ? err : undefined)
@@ -209,7 +206,7 @@ class App {
                 if (response.ok) {
                     // 尝试将响应体解析为 JSON
                     const res_data = response.json().catch(() => ({}))
-                    if (this.debug_mode) log('(API)res data:', res_data)
+                    // if (this.debug_mode) log('(API)res data:', res_data)
                     return res_data
                 } else {
                     // 如果响应不成功,返回一个空对象
@@ -236,7 +233,7 @@ class App {
      * @param {function(null | {valid: false, message: string, data: object})=} errCallback 出现错误的回调函数
      */
     useAPI(data, callback, errCallback) {
-        if (this.debug_mode) log('(API)useAPI req data:', data)
+        // if (this.debug_mode) log('(API)useAPI req data:', data)
         const onErr = (res_data) => {
             if (typeof errCallback !== 'function') return
             errCallback(res_data)
@@ -441,7 +438,9 @@ class App {
         if (child_elements instanceof Element) {
             return root_element.appendChild(child_elements)
         }
-        if (!(child_elements instanceof Array)) child_elements = Object.values(child_elements)
+        // if (!(Array.isArray(child_elements))) child_elements = Object.values(child_elements)
+        child_elements = Object.values(child_elements)
+        // log(child_elements)
         child_elements.forEach((element) => {
             if (!(element instanceof Element)) return
             root_element.appendChild(element)
@@ -593,25 +592,36 @@ class App {
         element.className = 'modal'
 
         const _footer = _box.root_main.footer
-        const _callback = this.eventCallbacks.msg_box
+
+
+
+        // listen click event...
+        const _clickBox = (value) => {
+            const callback = this.eventCallbacks.msgBox
+            this.lockMsgBox(false)
+            this.lockMsgBoxButton(true)
+
+            if (typeof callback === 'function') {
+                callback(value)
+                this.eventCallbacks.msgBox = undefined
+            }
+        }
+
+        // event - no
         _footer.cancel.addEventListener('click', () => {
-            this.lockMsgBox(false)
-            this.lockMsgBoxButton(true)
-            const callback = _callback.no
-            if (typeof callback === 'function') {
-                callback(false)
-                _callback.no = undefined // 调用过后销毁
-            }
+            _clickBox(false)
         })
+        // event - yes
         _footer.success.addEventListener('click', () => {
-            this.lockMsgBox(false)
-            this.lockMsgBoxButton(true)
-            const callback = _callback.yes
-            if (typeof callback === 'function') {
-                callback(true)
-                _callback.yes = undefined
-            }
+            _clickBox(true)
         })
+        // event - close => no
+        _box.root_main.root_head.close.addEventListener('click', () => {
+            _clickBox(false)
+        })
+
+
+
 
         this.elems_msg_box_all = _box
         this.elems_msg_box = {
@@ -676,20 +686,23 @@ class App {
         es.checkbox.checked = true
         es.title.className = `icon-${type}`
 
-        if (is_msg) { // message样式
+
+        
+        const addCallback = () => {
+            if (typeof callback === 'function') {
+                this.eventCallbacks.msgBox = callback
+            }
+        }
+
+        if (is_msg) { // style - message
             es.root.setAttribute('data-style', 'message')
 
-            if (typeof callback === 'function') {
-                const _callback = this.eventCallbacks.msg_box
-                _callback.yes = callback
-            }
-        } else { // confirm样式
+            addCallback()
+        } else { // style - confirm
             es.root.setAttribute('data-style', 'confirm')
 
             this.lockMsgBox(true)
-            const _callback = this.eventCallbacks.msg_box
-            _callback.no = callback
-            _callback.yes = callback
+            addCallback()
         }
 
         es.title.innerText = title
@@ -911,38 +924,38 @@ class Lyric {
     /**
      * 获取当前时间对应的歌词
      * @param {number} now_time 当前播放时间
+     * @param {number} [lyric_track] 需要获取的歌词轨道(`this.lyrics`的索引)
+     * @returns {number}
      */
-    get(now_time) {
-        const output = []
+    get(now_time, lyric_track = 0) {
+        let output = 0
         // 处理歌词
-        this.lyrics.forEach((lyric, index) => {
-            const setOutput = value => output[index] = value
-            let lyric_time = 0
-            // {123.45: `content...`, ...} => [123.45, ...]
-            const axis = Object.keys(lyric)
-            // forEach不支持中途退出, 改用传统for循环
-            // axis.forEach((time) => {
-            //     if (now_time >= time) {
-            //     }
-            // })
+        const lyric = this.lyrics[lyric_track]
+        let lyric_time = 0
+        // {123.45: `content...`, ...} => [123.45, ...]
+        const axis = Object.keys(lyric)
+        // forEach不支持中途退出, 改用传统for循环
+        // axis.forEach((time) => {
+        //     if (now_time >= time) {
+        //     }
+        // })
 
-            // 此表达式下歌词为空
-            if (axis[0] > now_time) return setOutput('')
-            
-            let _last_time = 0
-            // [123.45, ...] => for(123.45); ...
-            for (const time of axis) {
-                // log('now:', now_time, '>', 'time:', time, 'cont:', lyric[time])
-                if (now_time > time) {
-                    _last_time = time
-                    continue
-                }
-                lyric_time = _last_time
-                break
+        // 此表达式下歌词为空
+        if (axis[0] > now_time) return 0
+
+        let _last_time = 0
+        // [123.45, ...] => for(123.45); ...
+        for (const time of axis) {
+            // log('now:', now_time, '>', 'time:', time, 'cont:', lyric[time])
+            if (now_time > time) {
+                _last_time = time
+                continue
             }
-            setOutput(lyric[lyric_time])
-        })
-        return output
+            lyric_time = _last_time
+            break
+        }
+
+        return lyric_time
     }
 }
 
