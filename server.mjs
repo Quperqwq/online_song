@@ -2,7 +2,7 @@
  * 程序的入口文件, 构建了一个HTTP服务; 本文件主用于HTTP服务逻辑
  */
 
-import {app, Player, player, User, config} from './app.mjs' // 引入主类
+import {app, Player, player, User, config, songAPI} from './app.mjs' // 引入主类
 
 import express from 'express' // express框架
 import cookieParser from 'cookie-parser'
@@ -13,6 +13,8 @@ import cookieParser from 'cookie-parser'
 const GuestUser = new User({ 'is_guest': true })
 
 
+// 初始化版本信息
+app.version = 'dev-202409-8'
 
 // 接受来自命令行的传参
 const args = process.argv
@@ -353,6 +355,23 @@ httpApp.post('/api', (req, res) => {
             res_data.data.list = play_list ? play_list : []
             endReq()
             return
+        },
+        'search_song': () => {
+            // check valid
+            if (!isLogin()) return
+            if (!app.checkRole(user, res, 'order')) return
+            /**来自用户键入的关键词 @type {undefined | string} */
+            const keyword = req_data.keyword
+            if (!keyword) return endReq('keyword_not_found')
+            
+            // 开始搜索
+            songAPI.search(keyword, (search_data) => {
+                if (!search_data) {
+                    return endReq('server_error')
+                }
+                res_data.data = search_data
+                endReq()
+            })
         },
         // 用户注册
         'register': () => {

@@ -13,6 +13,8 @@ import crypto from 'crypto'
  * @typedef {import('./types').SongListData} SongData 歌曲列表
  * @typedef {import('./types').UserFileContent} UserFileContent 用户文件内容
  * 
+ * @typedef {import('./types').SearchSongData} SearchSongData 搜索返回的内容条目
+ * @typedef {import('./types').GetSongData} GetSongData 单曲信息条目内容
  */
 
 
@@ -89,13 +91,18 @@ export const config = {
         }
     },
 
-    /**非登入用户可访问的路由(可使用通配符) */
+    /**非登入用户可请求的路由(可使用通配符) */
     guest_routes: ['/profile', '/', '/dev', '/src/*', '/api'],
 
-    /**最大打印POST访问信息的字符串长度 */
+    /**最大打印POST请求信息的字符串长度 */
     print_access_max_length: 100,
-}
 
+    
+
+    /**(SongAPI)指定song api使用的主机地址 */
+    song_api_host: 'http://127.0.0.1:5001/',
+    
+}
 
 
 
@@ -1715,8 +1722,157 @@ export class User extends Player {
     }
 }
 
+class SongAPI {
+    /**
+     * @typedef {import('./netease_cloud_music_api-search').ApiResponse} SearchApiResponse 搜索响应内容
+     * @typedef {import('./netease_cloud_music_api-get_song').ApiResponse} GetSongApiResponse 获取单曲信息响应内容
+     */
+    /**
+     * 构建一个songAPI类
+     * @param {string} [song_api_host] 指定api的主机地址
+     * 
+     */
+    constructor(song_api_host = config.song_api_host) {
+        this.api_host = song_api_host
+    }
 
-// 初始化config信息
+    /**
+     * 使用该实例的API进行请求
+     * @param {string} req_path 请求路径
+     * @param {object.<string, string>} req_param 请求参数
+     * @param {function(object | null)} callback 回调函数
+     */
+    useAPI(req_path, req_param, callback) {
+        // 格式化URL
+        const url = new URL(this.api_host)
+        url.pathname = req_path
+        Object.keys(req_param).forEach((name) => {
+            const value = req_param[name]
+            url.searchParams.append(name, value)
+        })
+        /**需请求的URl */
+        const req_url = url.href
+
+        fetch(req_url, { 'method': 'GET' })
+            .then((response) => {
+                if (response.ok) {
+                    // 解析响应内容为JSON
+                    return response.json().catch(() => {null})
+                }
+            })
+            .then((data) => {
+                callback(data)
+            })
+            .catch((err) => {
+                app.error('try_request_url_error', req_path, err)
+                callback(null)
+            })
+    }
+
+    /**
+     * (SongAPI)使用API - 搜索歌曲
+     * @param {string} keyword 搜索关键词
+     * @param {function(SearchSongData[] | null)} callback 返回结果
+     * 
+     */
+    search(keyword, callback) {
+        this.useAPI('cloudsearch', {'keywords': keyword},
+            /** @param {SearchApiResponse | null} res_data */
+            (res_data) => {
+            // 检查相应内容有效性
+            if (!res_data) return callback(null)
+            if (!res_data.code === 200) return callback(null)
+
+            /**返回的歌曲列表 @type {SearchSongData[]} */
+            const song_list = []
+
+            const res_list = res_data.result.songs
+
+            // 解析信息并转换为标准格式
+            res_list.forEach((res_item, index) => {
+                /**@type {SearchSongData} */
+                const item = {}
+                item.valid = true
+                item.cover = res_item.al.picUrl
+                item.id = res_item.id
+                item.title = res_item.name
+                item.singer = []
+                res_item.ar.forEach((art) => {
+                    item.singer.push(art.name)
+                })
+                item.src = this.getSongURL(item.id, (song_url) => {
+                    if (!song_url) {
+                        item.valid = false
+                    }
+                    item.src = song_url
+                    song_list.push(item)
+                    // (FIX) 这里应当更改为正确使用的异步函数以确保请求顺序不错乱
+                    if (song_list.length === res_list.length) callback(song_list)
+                })
+            })
+        })
+    }
+
+    /**
+     * 
+     * @param {number[]} song_id 单个或多个歌曲ID
+     * @param {function(GetSongData[] | null)} callback 
+     */
+    getSong(song_id, callback) {
+
+        this.useAPI('/song/detail', {
+            ids: song_id.toString()
+        },
+        /**@param {GetSongApiResponse} res_data  */
+        (res_data) => {
+            /**返回的歌曲列表 @type {GetSongData[]} */
+            const song_list = []
+            // 检查相应内容有效性
+            if (!res_data) return callback(null)
+            if (!res_data.code === 200) return callback(null)
+
+            const res_list = res_data.songs
+        
+            res_list.forEach((song_item, index) => {
+                /**@type {GetSongData} */
+                const item = {}
+                item.cover = song_item.al.picUrl
+                item.id = song_item.id
+                item.title = song_item.name
+                item.singer = []
+                song_item.ar.forEach((art) => {
+                    item.singer.push(art.name)
+                })
+                item.title = song_item.name
+                this.getSongURL(item.id, (song_url) => {
+                    item.src = song_url
+                    song_list.push(item)
+                    // (FIX) 这里应当更改为正确使用的异步函数以确保请求顺序不错乱
+                    if (song_list.length === res_list.length) callback(song_list)
+                })
+            })
+        })
+    }
+    /**
+     * 获取ID对应的歌曲源链接
+     * @param {number} song_id 歌曲ID
+     * @param {function(string | null)} callback 
+     */
+    getSongURL(song_id, callback) {
+        this.useAPI('/song/url', {'id': song_id}, (res_data) => {
+            if (!res_data) return callback(null)
+            if (!res_data.code === 200) return callback(null)
+        
+            callback(res_data.data[0].url)
+        })
+    }
+}
+
+
+export const app = new App()
+
+
+// 初始化config信息并检查有效性
 Object.keys(config)
 const _init_config = () => {
     /**
@@ -1729,12 +1885,25 @@ const _init_config = () => {
     }
     config.local_music_url = formatURL(config.local_music_url)
     config.static_url = formatURL(config.static_url)
+
+
+    // URL
+    const urls = [config.song_api_host]
+
+    urls.forEach((url_item) => {
+        try {
+            new URL(url_item)
+        } catch (error) {
+            throw app.throwError('error_value_is_invalid_in_config', url_item, error)
+        }
+    })
+
 }
 _init_config()
 
 // 初始化对象
-export const app = new App()
 export const player = new Player()
-// 初始化版本信息
-app.version = 'dev-202408_24'
+export const songAPI = new SongAPI()
+
+
 

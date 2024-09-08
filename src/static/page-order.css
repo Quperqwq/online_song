@@ -1,15 +1,27 @@
 .control {
     text-align: center;
+    position: relative;
 }
 
 
 .search {
     display: flex;
+    position: absolute;
+    /* width: 100%; */
+    top: 0em;
+    left: 0;
+    right: 0;
     align-items: center;
     min-width: 10em;
     max-width: 20em;
     margin: 1em auto;
     height: 2.1em;
+    transition: top .2s;
+    z-index: 2;
+}
+
+.control[data-style-preview="hidden"] .search {
+    top: 3em;
 }
 
 .search input {
@@ -28,24 +40,35 @@
 
 .preview {
     display: inline-block;
+    position: relative;
     padding: 0 2em;
     margin-bottom: 1em;
+    margin-top: 4em;
     padding-bottom: .3em;
+    transition: opacity .2s;
+    z-index: 1;
     opacity: 0;
+    border-radius: 1em;
+    background-color: #f9f9f9;
+    overflow: hidden;
 }
 
-.preview[data-style="show"] {
+.control[data-style-preview="show"] .preview {
     opacity: 1;
 }
 
+.preview h3 {
+    color: #888;
+}
 
-.preview {
-    border-radius: 1em;
-    background-color: #f9f9f9;
+.preview h3 span {
+    color: #222;
 }
 
 
-
+.table-area {
+    padding-bottom: 3em;
+}
 
 
 .list {
@@ -55,4 +78,25 @@
 .list thead {
     position: sticky;
     top: 0;
+}
+
+.list tr .title, .list tr .singer, .list tr .play {
+    padding-right: .8em;
+    /* line-height: 1.2em; */
+}
+
+.list tr .title {
+    min-width: 6em;
+}
+
+.list tr .singer {
+    min-width: 8em;
+}
+
+.list tr .play {
+    width: 4em;
+}
+
+.list .sticky-top {
+    top: var(--head-height);
 }

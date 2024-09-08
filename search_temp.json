@@ -1,0 +1,164 @@
+{
+    "result": {
+        "searchQcReminder": null,
+        "songs": [
+            {
+                "name": "TEmPTaTiON",
+                "id": 1962431237,
+                "pst": 0,
+                "t": 0,
+                "ar": [
+                    {
+                        "id": 29793983,
+                        "name": "かねこちはる",
+                        "tns": [
+                            "金子千春"
+                        ],
+                        "alias": [
+                            "Ellim Gnirps",
+                            "星野音楽工房",
+                            "Chiharu Kaneko"
+                        ],
+                        "alia": [
+                            "Ellim Gnirps",
+                            "星野音楽工房",
+                            "Chiharu Kaneko"
+                        ]
+                    }
+                ],
+                "alia": [],
+                "pop": 80,
+                "st": 0,
+                "rt": "",
+                "fee": 8,
+                "v": 18,
+                "crbt": null,
+                "cf": "",
+                "al": {
+                    "id": 147832473,
+                    "name": "maimai でらっくす ベストアルバム ちほー 1",
+                    "picUrl": "http://p2.music.126.net/WwdEWUE0Wv_laQYYGuKgAw==/109951167643442480.jpg",
+                    "tns": [],
+                    "pic_str": "109951167643442480",
+                    "pic": 109951167643442480
+                },
+                "dt": 144186,
+                "h": {
+                    "br": 320000,
+                    "fid": 0,
+                    "size": 5769970,
+                    "vd": -50317,
+                    "sr": 44100
+                },
+                "m": {
+                    "br": 192000,
+                    "fid": 0,
+                    "size": 3462000,
+                    "vd": -47792,
+                    "sr": 44100
+                },
+                "l": {
+                    "br": 128000,
+                    "fid": 0,
+                    "size": 2308014,
+                    "vd": -46342,
+                    "sr": 44100
+                },
+                "sq": {
+                    "br": 991249,
+                    "fid": 0,
+                    "size": 17865619,
+                    "vd": -50306,
+                    "sr": 44100
+                },
+                "hr": null,
+                "a": null,
+                "cd": "01",
+                "no": 18,
+                "rtUrl": null,
+                "ftype": 0,
+                "rtUrls": [],
+                "djId": 0,
+                "copyright": 1,
+                "s_id": 0,
+                "mark": 17180008448,
+                "originCoverType": 3,
+                "originSongSimpleData": null,
+                "tagPicList": null,
+                "resourceState": true,
+                "version": 18,
+                "songJumpInfo": null,
+                "entertainmentTags": null,
+                "single": 0,
+                "noCopyrightRcmd": null,
+                "rtype": 0,
+                "rurl": null,
+                "mst": 9,
+                "cp": 1418220,
+                "mv": 0,
+                "publishTime": 1638460800000,
+                "privilege": {
+                    "id": 1962431237,
+                    "fee": 8,
+                    "payed": 0,
+                    "st": 0,
+                    "pl": 320000,
+                    "dl": 0,
+                    "sp": 7,
+                    "cp": 1,
+                    "subp": 1,
+                    "cs": false,
+                    "maxbr": 999000,
+                    "fl": 320000,
+                    "toast": false,
+                    "flag": 2064644,
+                    "preSell": false,
+                    "playMaxbr": 999000,
+                    "downloadMaxbr": 999000,
+                    "maxBrLevel": "sky",
+                    "playMaxBrLevel": "sky",
+                    "downloadMaxBrLevel": "sky",
+                    "plLevel": "exhigh",
+                    "dlLevel": "none",
+                    "flLevel": "exhigh",
+                    "rscl": null,
+                    "freeTrialPrivilege": {
+                        "resConsumable": false,
+                        "userConsumable": false,
+                        "listenType": null,
+                        "cannotListenReason": null
+                    },
+                    "rightSource": 0,
+                    "chargeInfoList": [
+                        {
+                            "rate": 128000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 0
+                        },
+                        {
+                            "rate": 192000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 0
+                        },
+                        {
+                            "rate": 320000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 0
+                        },
+                        {
+                            "rate": 999000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 1
+                        }
+                    ]
+                }
+            }
+        ],
+        "songCount": 340
+    },
+    "code": 200
+}

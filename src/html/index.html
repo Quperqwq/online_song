@@ -59,18 +59,6 @@
             text-align: center;
         }
 
-        .top {
-            margin: 0;
-            position: fixed;
-            bottom: 0;
-            right: 0;
-            margin-right: -6.5em;
-        }
-
-        .top[data-show=true] {
-            margin-right: 0;
-        }
-
         #top h2 {
             background-color: cornflowerblue;
             color: #fff;
@@ -130,17 +118,8 @@
         </footer>
     </section>
 
-    <a id="go-top" href="#top" data-show="false" class="top button">▲ TOP ▲</a>
-
     <script>
-        const eGoTop = document.getElementById('go-top')
-        window.addEventListener('scroll', () => { //监听滚动事件判断是否需要返回顶部
-            if (window.pageYOffset > 300) {
-                eGoTop.setAttribute('data-show', 'true')
-            } else {
-                eGoTop.setAttribute('data-show', 'false')
-            }
-        })
+        app.initBackTop()
     </script>
 
     <section id="msg-box"></section>

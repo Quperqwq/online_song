@@ -23,6 +23,7 @@
         "try_read_file_error": "尝试读取文件失败,提供的错误信息如下\n$cont_0$",
         "try_write_file_error": "尝试写入文件失败,提供的信息如下\n$cont_0$",
         "try_download_file_error": "尝试下载文件'$cont_0$'失败: \n$cont_1$",
+        "try_request_url_error": "尝试请求URL'$cont_0$'失败: \n$cont_1$",
 
         "invalid_request_param": "无效的请求参数: $cont_0$",
         "push_song": "已添加新的歌曲到播放列表: $cont_0$\nid(新歌的索引): $cont_1$\n点歌人: $cont_2$",
@@ -31,6 +32,7 @@
         "file_not_found": "文件'$cont_0$'不存在",
 
         "error_value_is_invalid": "给定的值'$cont_0$'无效" ,
+        "error_value_is_invalid_in_config": "Config内给定的参数'$cont_0$'无效 \n$cont_1$" ,
         "error_init_user_file": "尝试初始化用户信息文件'$cont_0$'失败",
         "error_reg_user": "尝试注册账户'$cont_0$'失败, 错误信息:$cont_1$",
         "error_read_file_invalid": "尝试读取数据文件'$cont_0$'时发现出现意外",
@@ -63,6 +65,7 @@
         "try_read_file_error": "failed to read the file, the provided error information is as follows\n$cont_0$",
         "try_write_file_error": "failed to write the file, the provided error information is as follows\n$cont_0$",
         "try_download_file_error": "try download file '$cont_0$' failed: \n$cont_1$",
+        "try_request_url_error": "try request url '$cont_0$'failed: \n$cont_1$",
         
         "invalid_request_param": "invalid request parameters: $cont_0$",
         "push_song": "a new song has been added to the playlist: $cont_0$\nid(index): $cont_1$\nsong requester: $cont_2$",
@@ -71,6 +74,7 @@
         "file_not_found": "file '$cont_0$' not found",
 
         "error_value_is_invalid": "value '$cont_0$' is invalid" ,
+        "error_value_is_invalid_in_config": "Config value '$cont_0$' is invalid \n$cont_1$" ,
         "error_init_user_file": "try init user file '$cont_0$' failed",
         "error_reg_user": "failed to register account '$cont_0$', error message: $cont_1$",
         "error_read_file_invalid": "an unexpected error occurred while trying to read the data file '$cont_0$'",

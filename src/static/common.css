@@ -14,6 +14,8 @@
 :root {
     --normal-color: #0074d9;
     --disabled-button-color: #aaa;
+
+    --head-height: 3em;
 }
 
 p {
@@ -29,17 +31,24 @@ ul {
 }
 
 
+table {
+    --radius: .2em;
+}
+
 table button {
     font-size: .8em;
-    /* margin: 0; */
+}
+
+table thead {
+    border-radius: var(--radius);
 }
 
 table th:first-child {
-    border-top-left-radius: .2em;
+    border-top-left-radius: var(--radius);
 }
 
 table th:last-child {
-    border-top-right-radius: .2em;
+    border-top-right-radius: var(--radius);
 }
 
 
@@ -68,6 +77,10 @@ table th:last-child {
   
 
 /* 粘性定位 */
+
+.relative {
+    position: relative;
+}
 
 .sticky-top {
     position: sticky;
@@ -105,11 +118,22 @@ table th:last-child {
     pointer-events: none;
 }
 
+.text-overflow-ellipsis,
+.text-overflow-ellipsis * {
+    text-wrap: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
 /* 布局 */
 .space {
     max-width: 540px;
     margin: 0 auto;
     /* padding: 0 1em; */
+}
+
+.line {
+    display: block;
 }
 
 
@@ -126,6 +150,29 @@ table th:last-child {
 
 .float-right {
     float: right;
+}
+
+.text-align-left {
+    text-align: left;
+}
+
+.text-align-right {
+    text-align: right;
+}
+
+/* 返回顶部按钮 */
+.back-top {
+    margin: 0;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    margin-right: -6.5em;
+    opacity: .6;
+    font-size: 1.2em;
+}
+
+.back-top[data-style="show"] {
+    margin-right: 0;
 }
 
 
@@ -253,7 +300,7 @@ nav#page-nav .brand .avatar, .avatar {
 }
 .icon-menu::before { content: '\e9bd';}
 .icon-home::before {content: '\e900';}
-.icon-order::before {content: '\ea0a';}
+.icon-order::before, .icon-plus::before {content: '\ea0a';}
 .icon-player::before, .icon-play::before {content: '\ea15';}
 .icon-user::before,.icon-login::before {content: '\e971';}
 .icon-debug::before {content: '\e999';}
@@ -270,6 +317,7 @@ nav#page-nav .brand .avatar, .avatar {
 .icon-del::before {content: '\e9ac';}
 .icon-admin::before, .icon-users::before {content: '\e972';}
 .icon-search::before {content: '\e986';}
+.icon-top::before {content: '\ea41';}
 
 
 [class*="icon-"].no-margin::before {

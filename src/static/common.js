@@ -60,6 +60,11 @@ class App {
                 debug: '调试',
             },
             msg_box: {
+                name_too_short: '名称过短。',
+                name_too_long: '名称过长。',
+                all_number: '不允许全部使用数字。',
+                name_have_special_char: '不允许包含特殊字符。',
+                is_repeat: '信息重复。',
                 password_error: '密码错误。',
                 input_is_null: '输入内容为空。',
                 check_file_too_big: '选择的文件过大。',
@@ -69,6 +74,7 @@ class App {
                 bad_request: '错误的请求。',
                 please_select_file: '请选择文件。',
                 please_input: '请输入内容。',
+                please_input_keyword: '请输入关键词。',
                 not_support_file: '不支持的文件类型。',
                 logging: '登入中...',
                 no_permissions: '没有权限。',
@@ -81,6 +87,7 @@ class App {
                 initializing: '正在初始化中...',
                 operate_requesting: '操作请求中...',
                 get_element_fail: '获取元素失败。',
+                get_preview_fail: '获取预览信息失败。',
 
                 // title
                 login_fail: '登入失败',
@@ -90,16 +97,12 @@ class App {
                 wait: '请稍等',
             },
             server: {
-                name_too_short: '名称过短。',
-                name_too_long: '名称过长。',
-                all_number: '不允许全部使用数字。',
-                name_have_special_char: '不允许包含特殊字符。',
-                is_repeat: '信息重复。',
             },
             item: {
                 'admin': '管理员',
                 'order': '点歌者',
                 'playing': '播放者',
+                'go_top': '返回顶部'
             }
         }
     }
@@ -149,6 +152,7 @@ class App {
             }
             appendErr(this.initMsgBox())
             appendErr(this.initHeader())
+            
             const err_list = this.init_err_list
             if (err_list.length !== 0) return console.error('error message: ', err_list) // 若有错误信息不执行初始化内容
 
@@ -230,10 +234,18 @@ class App {
      * 使用服务端API与其通讯
      * @param {object} data 传入对象
      * @param {function({valid: boolean, message: string, data: object})} callback 传入回调函数
-     * @param {function(null | {valid: false, message: string, data: object})=} errCallback 出现错误的回调函数
+     * @param {function({valid: false, message: string, data: object | null})=} errCallback 出现错误的回调函数
+     * 
+     * @example
+     * app.useAPI({'type': 'test'}, (res_data) => {
+     *  // 当请求成功时的回调函数...
+     * }, (res_data) => {
+     *  // 当请求失败的回调函数...
+     *  // 请求失败时会自动弹出错误框提示信息
+     * })
      */
     useAPI(data, callback, errCallback) {
-        // if (this.debug_mode) log('(API)useAPI req data:', data)
+        if (this.debug_mode) log('(API)useAPI req data:', data)
         const onErr = (res_data) => {
             if (typeof errCallback !== 'function') return
             errCallback(res_data)
@@ -551,6 +563,21 @@ class App {
 
 
 
+    // /**
+    //  * 初始化一个元素用于构建标签内内容
+    //  * @param {Element | string} element 传入元素或
+    //  * @param {string} id_name 默认ID名, 在没有传入Element的情况下会尝试获取该ID名的元素
+    //  * @returns {element | null}
+    //  */
+    // _initElement(element, id_name) {
+        
+    //     if (!element) element = document.getElementById(id_name)
+    //     if (!element) return null
+    
+    //     element.innerHTML = '' // 初始化根内容
+    //     return element
+    // }
+
     // msgBox
     /**
      * 初始化(创建)一个消息框
@@ -854,6 +881,27 @@ class App {
 
         console.debug('nav init ok.')
         return ''
+    }
+
+    // back top
+    /**
+     * 初始化一个页面返回顶部的按钮(链接); 当滚动到下面时该元素会以置顶的形式出现在页面, 点击后会跳转到id为top的标签处
+     * @param {string} id_name 按钮(链接)的ID名
+     */
+    initBackTop(id_name = 'go-top') {
+        let e_main = document.getElementById(id_name)
+        if (e_main) return 'is_exist'
+        e_main = this.createElement('a', {id: id_name, href: '#top', 'data-style': 'hidden', class: 'back-top icon-top button no-margin'})
+
+        document.body.appendChild(e_main)
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                e_main.setAttribute('data-style', 'show')
+            } else {
+                e_main.setAttribute('data-style', 'hidden')
+            }
+        })
     }
 }
 

@@ -1,15 +1,15 @@
 /**歌曲列表 - 歌曲数据 */
 interface SongListData {
     /**歌曲标题 */
-    title: string
+    title: string | null
     /**歌曲源 */
-    src: string;
+    src: string | null
     /**歌手 */
     singer: string | null
     /**歌曲封面 */ 
     cover: string | null
     /**歌曲总时长 */
-    time: number
+    time: number | null
     /**歌曲歌词 */
     lyric: string | null
 }
@@ -134,6 +134,40 @@ export interface UserInfo {
     login_time: number
 }
 
+/**搜索返回的歌曲条目内容 */
+interface SearchSongData {
+    /**歌曲ID */
+    id: number
+    /**歌曲标题 */
+    title: string
+    /**歌曲歌手 */
+    singer: string[]
+    /**歌曲封面 */
+    cover: string
+    /**歌曲源链接 */
+    src: string
+    /**歌曲是否可用/有效 */
+    valid: boolean
+}
+
+
+/**单曲信息条目内容 */
+interface GetSongData {
+    /**歌曲ID */
+    id: number
+    /**歌曲标题 */
+    title: string
+    /**歌曲歌手 */
+    singer: string[]
+    /**歌曲封面 */
+    cover: string | null
+    /**歌曲源链接 */
+    src: string
+    /**歌曲是否可用/有效 */
+    valid: boolean
+    /**歌曲时长 */
+    time: number
+}
 
 
 /**`page-player`页面内播放列表条目 */
@@ -157,3 +191,10 @@ interface DocPlayerDOMListItem {
 
 /**`page-player`页面播放列表 */
 export type DocPlayerDOMList = DocPlayerDOMListItem[]
+
+
+
+
+
+
+
