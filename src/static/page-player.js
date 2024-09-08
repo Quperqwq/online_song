@@ -7,6 +7,7 @@ const es_main = {
     lyric_lits: getEBI('lyric-list'),
     player: getEBI('audio'),
     playing: {
+        root: getEBI('player-area'),
         progress: getEBI('song-progress'),
         title: getEBI('song-title'),
         order: getEBI('song-order'),
@@ -32,6 +33,10 @@ app.listenInit(() => {
     let now_lyric = null
     /**当前播放歌曲的索引 */
     let now_index = -1
+    /**尝试错误的次数 */
+    let error_count = 0
+    /**允许尝试错误的次数 */
+    let max_error_count = 6
     /**
      * 进入主循环, 请求播放状态
      * @param {number} time 请求间隔时间
@@ -47,6 +52,7 @@ app.listenInit(() => {
      */
     const refreshList = (callback) => {
         app.useAPI({'type': 'get_song_list'}, (res_data) => {
+            error_count = 0
             // update list
             let update = [] // 只更新增加的曲目, 节约性能
             
@@ -85,8 +91,13 @@ app.listenInit(() => {
             }
         }, () => {
             // error
-            stopLoop()
-        })
+            error_count += 1
+            console.warn(`WARN: Server error encountered. Re-request attempts: ${error_count}`)
+            if (error_count >= max_error_count) {
+                app.errorBox(msgBoxText('server_error'))
+                stopLoop()
+            }
+        }, false)
     }
     /**停止主循环 */
     const stopLoop = () => { clearInterval(main_loop) }
@@ -135,7 +146,7 @@ app.listenInit(() => {
             // create - item(song info)
             const es_item = {
                 'title': createElement('span', {class: 'title'}, song_data.title),
-                'singer': createElement('span', {class: 'singer'}, song_data.singer),
+                'singer': createElement('span', {class: 'singer'}, song_data.singer.toString()),
             }
             const e_item = createElement('article', {class: 'item'})
             join(e_item, es_item)
@@ -195,6 +206,7 @@ app.listenInit(() => {
         es_player.order.innerText = song_item.order.name
         es_player.singer.innerText = song_item.data.singer
         es_player.title.innerText = song_item.data.title
+        es_player.root.setAttribute('style', `--image-url: url('${song_item.data.cover}')`)
 
 
 

@@ -266,13 +266,17 @@ main {
     }
 
     .list {
-        height: 16vh;
+        /* height: 4em; */
         width: 100%;
         margin-top: 1em;
     }
 
     .list h2 {
         display: none;
+    }
+
+    .list section {
+        height: 4em;
     }
 
     .player .background {

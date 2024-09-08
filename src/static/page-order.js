@@ -41,7 +41,22 @@ class SelectSong {
         e_audio.src = src
     }
     static order() {
-        app.useAPI({'type': ''})
+        app.waitBox(true, msgBoxText('server_processing'))
+        const {title, singer, src, cover} = SelectSong
+        if (!(title && singer && src)) {
+            app.errorBox(msgBoxText('order_song_fail'))
+            return
+        }
+        app.useAPI({
+            type: 'add_song',
+            src: src,
+            title: title,
+            singer: singer,
+            cover: cover
+        }, (res_data) => {
+            app.waitBox(false)
+            app.finishBox(msgBoxText('order_song_finish'))
+        })
     }
 
 }
@@ -73,14 +88,12 @@ app.listenInit(() => {
         }
         app.waitBox(true, msgBoxText('operate_requesting'))
         app.useAPI({type: 'search_song', keyword: keyword}, (res_data) => {
-            log(res_data)
             /**返回的搜索列表 @type {SearchSongData[]} */
             const search_list = res_data.data
 
             es_main.table.innerHTML = ''
             // create element ...
             search_list.forEach((song_item) => {
-                log(song_item)
 
                 // button
                 const e_button = createElement('button', {type: 'button', class: 'icon-play no-margin success'},  () => {
@@ -89,6 +102,7 @@ app.listenInit(() => {
                         app.errorBox(msgBoxText('get_preview_fail'))
                         return
                     }
+                    log(song_item)
                     new SelectSong(
                         song_item.title,
                         song_item.singer,
@@ -130,7 +144,7 @@ app.listenInit(() => {
     })
 
     es_preview.submit.addEventListener('click', () => {
-        
+        SelectSong.order()
     })
 
 

@@ -78,16 +78,21 @@ class App {
                 not_support_file: '不支持的文件类型。',
                 logging: '登入中...',
                 no_permissions: '没有权限。',
+                not_login: '登入过期。',
                 confirm_logout: '确定登出吗？',
                 confirm_del_user: '确定要删除该用户吗？',
                 change_avatar_finish: '更改头像成功。',
                 change_name_finish: '更改名称成功。',
                 register_user_finish: '注册用户成功。',
+                order_song_finish: '点歌成功。',
                 password_mismatch: '两次密码不一致。',
                 initializing: '正在初始化中...',
                 operate_requesting: '操作请求中...',
                 get_element_fail: '获取元素失败。',
                 get_preview_fail: '获取预览信息失败。',
+                order_song_fail: '点歌失败。',
+                server_error: '服务器或网络出现错误。',
+                server_processing: '服务器处理中。',
 
                 // title
                 login_fail: '登入失败',
@@ -235,6 +240,7 @@ class App {
      * @param {object} data 传入对象
      * @param {function({valid: boolean, message: string, data: object})} callback 传入回调函数
      * @param {function({valid: false, message: string, data: object | null})=} errCallback 出现错误的回调函数
+     * @param {boolean} [auto_error_box] 自动弹出错误框 
      * 
      * @example
      * app.useAPI({'type': 'test'}, (res_data) => {
@@ -244,7 +250,7 @@ class App {
      *  // 请求失败时会自动弹出错误框提示信息
      * })
      */
-    useAPI(data, callback, errCallback) {
+    useAPI(data, callback, errCallback, auto_error_box = true) {
         if (this.debug_mode) log('(API)useAPI req data:', data)
         const onErr = (res_data) => {
             if (typeof errCallback !== 'function') return
@@ -257,13 +263,13 @@ class App {
                 return
             }
             if (!res_data.valid) {
-                app.errorBox(msgBoxText(res_data.message))
+                if (auto_error_box) app.errorBox(msgBoxText(res_data.message))
                 onErr(res_data)
                 return
             }
             callback(res_data)
         }, (error) => {
-            app.errorBox(error)
+            if (auto_error_box) app.errorBox(error)
             onErr(error)
         })
     }

@@ -5,6 +5,7 @@ import path from 'path' // 路径
 import fetch from 'node-fetch' // fetch网络API
 import mime from 'mime' // 文件mime类型
 import crypto from 'crypto'
+import { type } from 'os'
 
 
 /**
@@ -1750,6 +1751,7 @@ class SongAPI {
             const value = req_param[name]
             url.searchParams.append(name, value)
         })
+        url.searchParams.append('time', app.getTime().toString()) // 添加时间戳避免缓存
         /**需请求的URl */
         const req_url = url.href
 
@@ -1770,7 +1772,7 @@ class SongAPI {
     }
 
     /**
-     * (SongAPI)使用API - 搜索歌曲
+     * 使用API - 搜索歌曲
      * @param {string} keyword 搜索关键词
      * @param {function(SearchSongData[] | null)} callback 返回结果
      * 
@@ -1783,13 +1785,15 @@ class SongAPI {
             if (!res_data) return callback(null)
             if (!res_data.code === 200) return callback(null)
 
-            /**返回的歌曲列表 @type {SearchSongData[]} */
+            /**返回的歌曲列表 @type {GetSongData[]} */
             const song_list = []
+            /**歌曲ID列表 @type {number[]} */
+            const id_list = []
 
             const res_list = res_data.result.songs
 
             // 解析信息并转换为标准格式
-            res_list.forEach((res_item, index) => {
+            res_list.forEach((res_item) => {
                 /**@type {SearchSongData} */
                 const item = {}
                 item.valid = true
@@ -1800,70 +1804,74 @@ class SongAPI {
                 res_item.ar.forEach((art) => {
                     item.singer.push(art.name)
                 })
-                item.src = this.getSongURL(item.id, (song_url) => {
-                    if (!song_url) {
-                        item.valid = false
-                    }
-                    item.src = song_url
-                    song_list.push(item)
-                    // (FIX) 这里应当更改为正确使用的异步函数以确保请求顺序不错乱
-                    if (song_list.length === res_list.length) callback(song_list)
-                })
+                song_list.push(item)
+                id_list.push(item.id)
             })
+            // 获取歌曲URL
+            this.getSongURL(id_list, (urls) => {
+                if (urls) {
+                    urls.forEach((src, index) => {
+                        song_list[index].valid = true
+                        song_list[index].src = src
+                    })
+                    callback(song_list)
+                } else {
+                    callback(null)
+                }
+            })
+
         })
     }
 
     /**
-     * 
-     * @param {number[]} song_id 单个或多个歌曲ID
-     * @param {function(GetSongData[] | null)} callback 
+     * 使用API - 获取单曲
+     * @param {number[]} song_id 单个歌曲ID
+     * @param {function(GetSongData | null)} callback 
      */
     getSong(song_id, callback) {
-
         this.useAPI('/song/detail', {
-            ids: song_id.toString()
+            id: song_id
         },
         /**@param {GetSongApiResponse} res_data  */
         (res_data) => {
-            /**返回的歌曲列表 @type {GetSongData[]} */
-            const song_list = []
-            // 检查相应内容有效性
-            if (!res_data) return callback(null)
-            if (!res_data.code === 200) return callback(null)
+            const song = res_data.songs[0]
+            /**@type {GetSongData} */
+            const item = {
+                'cover': song.al.picUrl,
+                'id': song.id,
+                'singer': song.ar,
+                'time': 0,
+                'title': song.name
+            }
 
-            const res_list = res_data.songs
-        
-            res_list.forEach((song_item, index) => {
-                /**@type {GetSongData} */
-                const item = {}
-                item.cover = song_item.al.picUrl
-                item.id = song_item.id
-                item.title = song_item.name
-                item.singer = []
-                song_item.ar.forEach((art) => {
-                    item.singer.push(art.name)
-                })
-                item.title = song_item.name
-                this.getSongURL(item.id, (song_url) => {
-                    item.src = song_url
-                    song_list.push(item)
-                    // (FIX) 这里应当更改为正确使用的异步函数以确保请求顺序不错乱
-                    if (song_list.length === res_list.length) callback(song_list)
-                })
+            this.getSongURL(item.id, (src) => {
+                if (src) {
+                    item.src = src
+                    item.valid = true
+                    callback(item)
+                } else {
+                    callback(null)
+                }
             })
         })
     }
+
     /**
      * 获取ID对应的歌曲源链接
-     * @param {number} song_id 歌曲ID
-     * @param {function(string | null)} callback 
+     * @param {number[] | number} song_id 歌曲ID
+     * @param {function(string[] | undefined)} callback 
      */
     getSongURL(song_id, callback) {
-        this.useAPI('/song/url', {'id': song_id}, (res_data) => {
+        this.useAPI('/song/url', {'id': song_id.toString(), 'br': 320000}, (res_data) => {
             if (!res_data) return callback(null)
             if (!res_data.code === 200) return callback(null)
-        
-            callback(res_data.data[0].url)
+            
+            /**歌曲源列表 @type {string} */
+            const src_list = []
+            res_data.data.forEach((song_item) => {
+                src_list.push(song_item.url)
+            })
+            callback(src_list)
         })
     }
 }
