@@ -14,7 +14,7 @@ const GuestUser = new User({ 'is_guest': true })
 
 
 // 初始化版本信息
-app.version = 'dev-202409-8'
+app.version = 'dev-202409-10'
 
 // 接受来自命令行的传参
 const args = process.argv
@@ -299,21 +299,42 @@ httpApp.post('/api', (req, res) => {
             if (!isLogin()) return
             if (!isValid(req_data.src, req_data.title)) return // 检查参数
             if (!app.checkRole(user, res, 'order')) return
-            user.order({
-                'cover': valid(req_data.cover, config.normal_cover_url),
-                'singer': req_data.singer,
-                'src': req_data.src,
-                'time': req_data.time,
-                'title': req_data.title,
-                'lyric': req_data.lyric
-            }, (_err) => { // 获取错误信息
-                if (!_err) { // 添加成功
-                    // res_data.valid = true // 特意留在这里了一行注释掉了, 别再手贱多谢这一行! 函数底部有!
-                    return endReq()
-                } else { // 添加失败返回错误信息
-                    return endReq(_err)
-                }
-            })
+
+            // 点歌部分逻辑
+            const _orderSong = (lyric, sub_lyric) => {
+                user.order({
+                    'cover': valid(req_data.cover, config.normal_cover_url),
+                    'singer': req_data.singer,
+                    'src': req_data.src,
+                    'time': req_data.time,
+                    'title': req_data.title,
+                    'lyric': lyric,
+                    'sub_lyric': sub_lyric
+                }, (_err) => { // 获取错误信息
+                    if (!_err) { // 添加成功
+                        // res_data.valid = true // 特意留在这里了一行注释掉了, 别再手贱多谢这一行! 函数底部有!
+                        return endReq()
+                    } else { // 添加失败返回错误信息
+                        return endReq(_err)
+                    }
+                })
+            }
+
+            // (FIX)这里为了更好地语义化 以后建议改为await函数
+            // 判断是否需要获取歌词
+            app.log(req_data)
+            if (req_data.id) {
+                // 通过ID获取此歌曲的歌词
+                songAPI.getSongLyric(req_data.id, (lyric_data) => {
+                    app.log(lyric_data)
+                    if (!lyric_data) return _orderSong()
+                    _orderSong(lyric_data[0], lyric_data[1])
+                    // app.log('0', lyric_data[0], '1', lyric_data[1])
+                })
+            } else {
+                _orderSong()
+            }
+
 
         },
         // 用户登入
@@ -356,6 +377,22 @@ httpApp.post('/api', (req, res) => {
             endReq()
             return
         },
+        // 获取歌词
+        'get_lyric': () => {
+            // check valid
+            if (!isLogin()) return
+            if (!app.checkRole(user, res, 'order')) return
+
+            /**用户指定的歌曲ID @type {string} */
+            const song_id = req_data.song_id
+
+            songAPI.getSongLyric(song_id, (lyric_data) => {
+                if (!lyric_data) return endReq('invalid_song_id')
+                res_data.data = lyric_data
+                endReq()
+            })
+        },
+        // 搜索歌曲
         'search_song': () => {
             // check valid
             if (!isLogin()) return

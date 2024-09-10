@@ -215,7 +215,6 @@ class App {
                 if (response.ok) {
                     // 尝试将响应体解析为 JSON
                     const res_data = response.json().catch(() => ({}))
-                    // if (this.debug_mode) log('(API)res data:', res_data)
                     return res_data
                 } else {
                     // 如果响应不成功,返回一个空对象
@@ -238,7 +237,7 @@ class App {
     /**
      * 使用服务端API与其通讯
      * @param {object} data 传入对象
-     * @param {function({valid: boolean, message: string, data: object})} callback 传入回调函数
+     * @param {function({valid: true, message: string, data: object})} callback 传入回调函数
      * @param {function({valid: false, message: string, data: object | null})=} errCallback 出现错误的回调函数
      * @param {boolean} [auto_error_box] 自动弹出错误框 
      * 
@@ -257,6 +256,7 @@ class App {
             errCallback(res_data)
         }
         this.makeFetch('POST', this.api_url, data, (res_data) => {
+            if (this.debug_mode) log('(API)useAPI res data:', res_data)
             if (!res_data) {
                 app.errorBox(msgBoxText('bad_request'))
                 onErr(res_data)
@@ -450,19 +450,52 @@ class App {
     /**
      * (DOM)(Element.appendChild)组合元素
      * @param {Element} root_element 根(父)元素
-     * @param {Array.<Element> | Object.<string, Element> | Element} child_elements 子元素
+     * @param {any} child_elements 子元素
      */
     joinElement(root_element, child_elements) {
         if (child_elements instanceof Element) {
             return root_element.appendChild(child_elements)
         }
+        
+        // /**(!)这里可能会由于疏忽出现错误或漏洞
+        //  * 获取对象中的`Element`
+        //  * @param {any} obj 可遍历对象
+        //  * @param {number} num 当前迭代次数
+        //  * @param {number} max_num 最大迭代次数
+        //  * @returns {undefined | Element[]}
+        //  */
+        // const getElements = (obj, num, max_num = 4) => {
+        //     num += 1
+        //     if (num <= max_num) return
+        //     const elems = []
+        //     Object.values(obj).forEach((item_obj) => {
+        //         log(obj, 'obj:', item_obj)
+        //         if (item_obj instanceof Element) {
+        //             elems.push(item_obj)
+        //             return
+        //         }
+        //         if (!Array.isArray(item_obj)) return
+                
+        //         const cont_obj = getElements(item_obj, num)
+        //         if (!cont_obj) return
+        //         elems.push(...cont_obj)
+        //     })
+        //     return elems.length > 0 ? elems : void 0
+        // }
+
+
         // if (!(Array.isArray(child_elements))) child_elements = Object.values(child_elements)
         child_elements = Object.values(child_elements)
-        // log(child_elements)
         child_elements.forEach((element) => {
             if (!(element instanceof Element)) return
+            // getElements()
             root_element.appendChild(element)
         })
+        // const elems = getElements(child_elements)
+        // if (!elems) return
+        // elems.forEach((element) => {
+        //     root_element.appendChild(element)
+        // })
     }
 
     /**
@@ -528,6 +561,7 @@ class App {
      * @param {string} url 指定URL
      */
     switchURL(url) {
+        // if (!this.debug_mode) window.location.href = url
         if (!this.debug_mode) window.location.href = url
     }
 

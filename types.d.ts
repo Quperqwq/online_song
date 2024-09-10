@@ -12,6 +12,10 @@ interface SongListData {
     time: number | null
     /**歌曲歌词 */
     lyric: string | null
+    /**歌曲副歌词 */
+    sub_lyric: string | null
+    /**歌曲ID */
+    id: number | null
 }
 
 /**歌曲列表 - 歌曲信息 */

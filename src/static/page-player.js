@@ -27,7 +27,7 @@ app.listenInit(() => {
     let es_this_list = []
     /**播放列表的歌词类 @type {(Lyric|null)[]} */
     let lyric_this_list = []
-    /**当前歌曲的歌词DOM元素 @type {Object.<number, Element>} */
+    /**当前歌曲的歌词DOM元素 @type {Object.<number, Element[]>} */
     let es_now_lyric = {}
     /**当前歌曲的对象 @type {Lyric | null} */
     let now_lyric = null
@@ -128,6 +128,8 @@ app.listenInit(() => {
             const user_id = song.order.uid
             const song_data = song.data
             const song_lyric = song.data.lyric
+            const song_sub_lyric = song.data.sub_lyric
+            log(song.data)
             
             number += 1
 
@@ -162,7 +164,7 @@ app.listenInit(() => {
             })
 
             // init lyric
-            lyric_this_list.push(song_lyric ? new Lyric(song_lyric) : null)
+            lyric_this_list.push(song_lyric ? new Lyric(song_lyric, song_sub_lyric) : null)
 
             // check player
             if (player.ended) {
@@ -219,13 +221,21 @@ app.listenInit(() => {
         if (lyric) {
             // update lyric
             now_lyric = lyric
-            lyric.lyrics.forEach((lyric_item) => {
+            lyric.lyrics.forEach((lyric_item, index) => {
+                // create element
                 app.forEachObject(lyric_item, (key, value) => {
-                    es_now_lyric[key] = createElement('li', {}, value)
+                    if (!es_now_lyric[key]) es_now_lyric[key] = []
+                    es_now_lyric[key][index] = createElement('li', {}, value)
+                })
+
+                // join element
+                app.forEachObject(es_now_lyric, (_, elems) => {
+                    elems.forEach((elem) => {
+                        join(e_lyric, elem)
+                    })
                 })
             })
 
-            join(e_lyric, es_now_lyric)
             log('init:', es_now_lyric)
         }
     }
@@ -243,9 +253,11 @@ app.listenInit(() => {
         const now_lyric_time = now_lyric.get(time)
         const e_now_lyric = es_now_lyric[now_lyric_time]
         if (!e_now_lyric) return
-        e_now_lyric.scrollIntoView()
-        e_now_lyric.classList.add('now')
-        es_lyric_set_style.push(e_now_lyric)
+        e_now_lyric.forEach((element, index) => {
+            if (index === 0) element.scrollIntoView()
+            element.classList.add('now')
+            es_lyric_set_style.push(element)
+        })
     }
     /**刷新播放器内容(如进度条) */
     const refreshPlayer = () => {

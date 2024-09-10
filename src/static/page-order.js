@@ -30,19 +30,21 @@ class SelectSong {
      * @param {string} title 
      * @param {string} singer 
      * @param {string} src 
+     * @param {number} id 
      * @param {string | null} cover 
      */
-    constructor(title, singer, src, cover) {
+    constructor(title, singer, src, id, cover) {
         SelectSong.title = title
         SelectSong.singer = singer
         SelectSong.src = src
+        SelectSong.id = id
         SelectSong.cover = cover ? cover : null
         es_preview.title.innerText = title
         e_audio.src = src
     }
     static order() {
         app.waitBox(true, msgBoxText('server_processing'))
-        const {title, singer, src, cover} = SelectSong
+        const {title, singer, src, cover, id} = SelectSong
         if (!(title && singer && src)) {
             app.errorBox(msgBoxText('order_song_fail'))
             return
@@ -52,7 +54,8 @@ class SelectSong {
             src: src,
             title: title,
             singer: singer,
-            cover: cover
+            cover: cover,
+            id: id
         }, (res_data) => {
             app.waitBox(false)
             app.finishBox(msgBoxText('order_song_finish'))
@@ -61,14 +64,29 @@ class SelectSong {
 
 }
 
+class Page {
+    /**
+     * 设置预览元素是否隐藏
+     * @param {boolean} is_hidden 是否隐藏
+     */
+    static setPreviewHidden(is_hidden) {
+        const set_attrib = str => es_main.control.setAttribute('data-style-preview', str)
+        if (is_hidden) {
+            set_attrib('hidden')
+        } else {
+            set_attrib('show')
+        }
+    }
+}
+
 
 // listen audio event...
 es_preview.audio.addEventListener('error', () => {
-    es_main.control.setAttribute('data-style-preview', 'hidden')
+    Page.setPreviewHidden(true)
 })
 
 es_preview.audio.addEventListener('canplay', () => {
-    es_main.control.setAttribute('data-style-preview', 'show')
+    Page.setPreviewHidden(false)
     e_audio.play()
 })
 
@@ -80,6 +98,11 @@ app.listenInit(() => {
     // ref
     const e_table = es_main.table
 
+    // init
+    Page.setPreviewHidden(true)
+
+
+    // func
     const startSearch = () => {
         const keyword = es_main.search.input.value
         if (!keyword) {
@@ -94,7 +117,6 @@ app.listenInit(() => {
             es_main.table.innerHTML = ''
             // create element ...
             search_list.forEach((song_item) => {
-
                 // button
                 const e_button = createElement('button', {type: 'button', class: 'icon-play no-margin success'},  () => {
                     // select song -> create preview
@@ -102,11 +124,12 @@ app.listenInit(() => {
                         app.errorBox(msgBoxText('get_preview_fail'))
                         return
                     }
-                    log(song_item)
+                    log(song_item, song_item.id)
                     new SelectSong(
                         song_item.title,
                         song_item.singer,
                         song_item.src,
+                        song_item.id,
                         song_item.cover
                     )
                 })

@@ -1,4 +1,0 @@
-class name {
-    constructor(parameters) {
-    }
-}

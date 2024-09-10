@@ -132,9 +132,9 @@ app.listenInit(() => {
                 const es_new_line = {
                     name: createElement('td', {class: 'name'}, username),
                     id: createElement('td', {class: 'id'}, user_id),
-                    c_time: createElement('td', {class: 'c-time'}, info.ctime),
-                    m_time: createElement('td', {class: 'm-time'}, info.mtime),
-                    login_time: createElement('td', {class: 'login-time'}, info.login_time),
+                    c_time: createElement('td', {class: 'c-time'}, info.ctime, true),
+                    m_time: createElement('td', {class: 'm-time'}, info.mtime, true),
+                    login_time: createElement('td', {class: 'login-time'}, info.login_time, true),
                     role: e_role,
                     operate: e_operate,
                 }

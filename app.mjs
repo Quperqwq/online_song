@@ -101,7 +101,7 @@ export const config = {
     
 
     /**(SongAPI)指定song api使用的主机地址 */
-    song_api_host: 'http://127.0.0.1:5001/',
+    song_api_host: 'http://127.0.0.1:27001/',
     
 }
 
@@ -226,7 +226,7 @@ class App {
         this.lang = config.lang
         this.version = '' // 定义版本
         /**指定服务器端口 */
-        this.prot = 5000
+        this.prot = 27000
         /**指定服务器host */
         this.host = '0.0.0.0'
 
@@ -1006,7 +1006,8 @@ export class Player {
                     'src': song_src,
                     'time': valid(song_data.time, 0),
                     'title': song_data.title,
-                    'lyric': valid(song_data.lyric)
+                    'lyric': valid(song_data.lyric),
+                    'sub_lyric': valid(song_data.sub_lyric),
                 },
                 info: {
                     'id': song_id,
@@ -1738,6 +1739,17 @@ class SongAPI {
     }
 
     /**
+     * 判断一个请求的相应内容是否有效
+     * @param {object} res_data 传入响应内容
+     * @returns {boolean}
+     */
+    isValidRes(res_data) {
+        if (!res_data) return false
+        if (!res_data.code === 200) return false
+        return true
+    }
+
+    /**
      * 使用该实例的API进行请求
      * @param {string} req_path 请求路径
      * @param {object.<string, string>} req_param 请求参数
@@ -1834,6 +1846,7 @@ class SongAPI {
         },
         /**@param {GetSongApiResponse} res_data  */
         (res_data) => {
+            if (!this.isValidRes(res_data)) return callback(null)
             const song = res_data.songs[0]
             /**@type {GetSongData} */
             const item = {
@@ -1863,8 +1876,7 @@ class SongAPI {
      */
     getSongURL(song_id, callback) {
         this.useAPI('/song/url', {'id': song_id.toString(), 'br': 320000}, (res_data) => {
-            if (!res_data) return callback(null)
-            if (!res_data.code === 200) return callback(null)
+            if (!this.isValidRes(res_data)) return callback(null)
             
             /**歌曲源列表 @type {string} */
             const src_list = []
@@ -1872,6 +1884,22 @@ class SongAPI {
                 src_list.push(song_item.url)
             })
             callback(src_list)
+        })
+    }
+
+    /**
+     * 
+     * @param {number | string} song_id 单个歌曲ID
+     * @param {function(string[] | null)} callback 返回歌词列表
+     */
+    getSongLyric(song_id, callback) {
+        this.useAPI('/lyric', {id: song_id}, (res_data) => {
+            if (!this.isValidRes(res_data)) return callback(null)
+            const {lrc, tlyric} = res_data
+            callback([
+                lrc.lyric,
+                tlyric ? tlyric.lyric : undefined
+            ])
         })
     }
 }
