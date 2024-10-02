@@ -41,6 +41,11 @@ export const config = {
     /**(User)用户信息存储路径 */
     user_file: './user.json',
 
+    /**HTTP默认监听端口 */
+    listen_port: 5000,
+    /**HTTP默认监听地址 */
+    listen_host: '0.0.0.0',
+
     /**静态文件路由路径 */
     static_url: '/src',
     /**(Player)默认封面地址 */
@@ -93,7 +98,7 @@ export const config = {
     },
 
     /**非登入用户可请求的路由(可使用通配符) */
-    guest_routes: ['/profile', '/', '/dev', '/src/*', '/api'],
+    guest_routes: ['/profile', '/', '/dev', '/src/*', '/api', '/robots.txt'],
 
     /**最大打印POST请求信息的字符串长度 */
     print_access_max_length: 100,
@@ -226,9 +231,9 @@ class App {
         this.lang = config.lang
         this.version = '' // 定义版本
         /**指定服务器端口 */
-        this.prot = 27000
+        this.prot = config.listen_port
         /**指定服务器host */
-        this.host = '0.0.0.0'
+        this.host = config.listen_host
 
         // 初始化常见对象
         this.modDate = new Date()
@@ -486,6 +491,9 @@ class App {
     /**
      * 获取字符串格式的时间以便阅读
      * @returns {string}
+     * 
+     * @example
+     * app.date() // 2024/10/2 22:41:25
      */
     date() {
         // return this.modDate.toLocaleString()
@@ -550,6 +558,25 @@ class App {
             fs.writeFileSync(file_name, data, 'utf-8')
         } catch (err) {
             this.error('try_write_file_error', err)
+            valid = false
+        }
+        return callback ? callback(valid) : valid
+    }
+
+    /**
+     * 向文件内追加内容(内置模块功能封装)
+     * be like:this.writeFile 
+     * @param {string} file_name 传入文件名
+     * @param {string} data 需要写入的内容
+     * @param {function | undefined} callback 回调函数
+     * @returns {boolean} 是否写入成功
+     */
+    appendFile(file_name, data, callback = void 0) {
+        let valid = true
+        try {
+            fs.appendFileSync(file_name, data, 'utf-8')
+        } catch (err) {
+            this.error('try_append_file_error', err)
             valid = false
         }
         return callback ? callback(valid) : valid
@@ -886,14 +913,18 @@ class App {
         if (msg) {
             message = '| ' + msg
         }
-        app.log( // 打印访问日志
+
+        // 打印访问日志
+        const output_content = [
             color(req.ip, 'blue'),
             color(req.method, 'green'),
             color(req.url, 'gray'),
             color(`HTTP/${req.httpVersion}`, 'yellow'),
             message,
             more_info,
-        )
+        ]
+
+        app.log(...output_content)
     }
     /**
      * 抛出错误

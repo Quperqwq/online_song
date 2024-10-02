@@ -14,7 +14,7 @@ const GuestUser = new User({ 'is_guest': true })
 
 
 // 初始化版本信息
-app.version = 'dev-202409-10'
+app.version = 'dev-20241002++'
 
 // 接受来自命令行的传参
 const args = process.argv
@@ -58,9 +58,10 @@ httpApp.use(express.json({limit: config.req_max_size})) // 配置json解析中�
 httpApp.use(express.urlencoded({ limit: config.req_max_size, extended: true })) // 配置表单数据允许的最大值
 httpApp.use(cookieParser()) // 配置Cookie解析中间件
 
-// 打印访问日志并验证身份
+
+// TODO 在请求前进行的操作
 httpApp.use((req, res, next) => {
-    // (i)这里是身份验证的逻辑
+    // (i)这里是身份验证的逻辑, 打印访问日志并验证身份
 
     const invalid = (type = 'need_login') => {
         const toURL = app.toUrlStr
@@ -121,9 +122,23 @@ httpApp.use((req, res, next) => {
         invalid()
         return
     }
-
+    
+    /**获取用户对象的用户名 */
+    const user_name = res.locals.user.profile.name
     // 打印访问日志
-    app.printAccess(req, `${res.locals.user.profile.name}`)
+    app.printAccess(req, `${user_name}`, true)
+
+
+
+    // (i)这里是访问日志生成的逻辑
+    // (ADD)将文件存储路径标准化,使其便于更改和校验
+
+    // 获取用户代理内容
+    const user_agent = req.headers['user-agent']
+
+    let log_content = `\n\n${app.date()} | ${user_name}\nMETHOD: ${req.method}\nIP: ${req.ip}\nUSER_AGENT: ${user_agent}`
+    
+    app.appendFile('./log/user_req.log', log_content)
 
     next()
 })
@@ -182,6 +197,12 @@ httpApp.get('/dev', (req, res) => {
         )
     })
     res.end()
+})
+
+// robots.txt
+httpApp.get('/robots.txt', (req, res) => {
+    // 允许所有爬虫
+    res.end('User-agent: *\nDisallow:')
 })
 
 // 本地音乐

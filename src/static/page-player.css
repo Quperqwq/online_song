@@ -153,7 +153,7 @@ main {
 .progress .content {
     --progress-height: .4em;
     --size: calc(var(--progress-height) + .4em);
-    transition: width 0.2s ease-out;
+    transition: width 1s ease-out;
     position: relative;
     width: var(--progress);
     height: var(--progress-height);

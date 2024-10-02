@@ -13,7 +13,7 @@ const getEBI = (id_name) => {
     const element = document.getElementById(id_name)
     if (!element) {
         if (!app.is_init) return console.error(`get element by id '${id_name}' error`)
-        app.errorBox(msgBoxText('get_element_fail' + `\n${id_name}`))
+        app.errorBox(msgBoxText('get_element_fail') + `\n${id_name}`)
     }
     return element
 }
@@ -24,7 +24,7 @@ class App {
     /**静态文件所在这个网站的位置 */
     static_url = '/src'
     /**是否启用调试模式 */
-    debug_mode = true
+    debug_mode = false
     /**API的URL */
     api_url = '/api'
     /**当前页面的路径 */
@@ -959,6 +959,7 @@ class Lyric {
          */
         this.lyrics = [this.getList(lyric_str)]
         if (sub_lyric_str) this.lyrics[1] = this.getList(sub_lyric_str)
+        log('lyric:', this.lyrics)
 
         
     }
@@ -1032,6 +1033,7 @@ class Lyric {
         if (axis[0] > now_time) return 0
 
         let _last_time = 0
+        // (FIX)无法按预期实现
         // [123.45, ...] => for(123.45); ...
         for (const time of axis) {
             // log('now:', now_time, '>', 'time:', time, 'cont:', lyric[time])
