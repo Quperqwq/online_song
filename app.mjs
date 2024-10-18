@@ -5,7 +5,6 @@ import path from 'path' // 路径
 import fetch from 'node-fetch' // fetch网络API
 import mime from 'mime' // 文件mime类型
 import crypto from 'crypto'
-import { type } from 'os'
 
 
 /**
@@ -16,6 +15,7 @@ import { type } from 'os'
  * 
  * @typedef {import('./types').SearchSongData} SearchSongData 搜索返回的内容条目
  * @typedef {import('./types').GetSongData} GetSongData 单曲信息条目内容
+ * @typedef {import('./types').UserData} UserData 用户信息
  */
 
 
@@ -32,6 +32,8 @@ export const config = {
     lang: 'zh-CN',
     /**静态文件路径 */
     static_path: './src/static',
+    /**日志存放路径 */
+    log_path: './log',
     /**用户头像存放路径 */
     user_avatar_path: './src/static/avatar',
     /**(APP)HTML路径 */
@@ -42,7 +44,7 @@ export const config = {
     user_file: './user.json',
 
     /**HTTP默认监听端口 */
-    listen_port: 5000,
+    listen_port: 27000,
     /**HTTP默认监听地址 */
     listen_host: '0.0.0.0',
 
@@ -235,6 +237,9 @@ class App {
         /**指定服务器host */
         this.host = config.listen_host
 
+        /**访问日志存储的目录 */
+        this.req_log_path = path.join(config.log_path, 'user_req.log')
+
         // 初始化常见对象
         this.modDate = new Date()
 
@@ -341,7 +346,7 @@ class App {
     /**向控制台打印信息;key是一个对应在语言模板的键,value是对应语言模板的值 */
     info(key = '', ...value) {
         console.log(
-            this.colorFont(`${this.date()} [INFO] ${this.text(key, ...value)}`, 'black')
+            this.colorFont(`${this.date()} [INFO] ${this.text(key, ...value)}`, 'black', 'white')
         )
     }
     /**向控制台打印警告信息;key是一个对应在语言模板的键,value是对应语言模板的值 */
@@ -1294,6 +1299,11 @@ export class User extends Player {
         return this.user_data.role
     }
 
+    /**(user_data)获取UID */
+    get uid() {
+        return this.user_data.profile.id
+    }
+
     /**初始化内容 */
     _initData() {
         const time = app.getTime()
@@ -1641,6 +1651,37 @@ export class User extends Player {
         return ''
     }
 
+    
+    /**
+     * 删除(注销)当前用户
+     * @param {number} [uid] 指定删除用户的UID(仅在admin账户下可用)
+     */
+    remove(uid) {
+        if (!this.is_login) return 'not_login'
+        let target_id = -1
+        if (uid) {
+            if (!this.user_role.admin) return 'no_permissions'
+            target_id = uid
+        } else {
+            target_id = this.uid
+        }
+        try {
+            // app.log('target_uid:', target_id)
+            // 清除用户列表对应用户
+            this.all_user[target_id] = undefined
+            // 清除临时登入项
+            this.all_login_data[target_id] = undefined
+        } catch (err) {
+            app.error('execution_error', err)
+            return 'remove_fail'
+        }
+        if (this.update()) {
+            return ''
+        } else {
+            return 'remove_fail'
+        }
+    }
+
     /**
      * (Player)点一首歌到播放列表
      * @param {SongData} song_data 
@@ -1729,7 +1770,7 @@ export class User extends Player {
     }
 
     /**
-     * (admin user)更改指定用户的角色
+     * (admin)更改指定用户的角色
      * @param {number} target_id 目标用户的ID
      * @param {string} role_name 角色名
      * @param {boolean} role_value 角色名对应的值
@@ -1738,7 +1779,7 @@ export class User extends Player {
         if (!this.user_role.admin) return 'no_permissions' // 检查
         if (this.profile.id === target_id) return 'cant_self' // 不可操作自己的权限
 
-        const target_user = this.all_data.users[target_id] // 确定
+        const target_user = this.all_data.users[target_id] // 确定要操作的用户
         if (!target_user) return 'user_not_exist'
 
         try { // 更改
@@ -1753,6 +1794,9 @@ export class User extends Player {
         }
         
     }
+
+
+
 }
 
 class SongAPI {
@@ -1965,6 +2009,20 @@ const _init_config = () => {
         }
     })
 
+    // path - 校验config指定的路径是否合法
+    const paths = [config.log_path]
+    paths.forEach((path) => {
+        app.getFileStat(path, (stat) => {
+            if (stat.isFile()) {
+                app.throwError('invalid_path', path)
+            }
+            if (!(stat.isDirectory())) {
+                fs.mkdir(path)
+                return
+            }
+            app.throwError('invalid_path', path)
+        })
+    })
 }
 _init_config()
 

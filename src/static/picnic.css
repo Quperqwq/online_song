@@ -502,7 +502,7 @@ th {
 }
 
 tr:nth-child(even) {
-    background: rgba(17,17,17,.05)
+    background: rgba(17,17,17,.05);
 }
 
 .flex {

@@ -7,11 +7,13 @@ const es_main = {
     search: {
         input: getEBI('search-input'),
         submit: getEBI('search-submit'),
+        info: getEBI('search-info')
     },
     preview: {
         root: getEBI('preview'),
         title: getEBI('preview-title'),
         audio: getEBI('player'),
+        download: getEBI('start-download'),
         submit: getEBI('order-submit'),
     },
     control: getEBI('control'),
@@ -20,6 +22,7 @@ const es_main = {
 
 const es_preview = es_main.preview
 const e_audio = es_main.preview.audio
+const es_search = es_main.search
 
 class SelectSong {
     title = ''
@@ -147,6 +150,9 @@ app.listenInit(() => {
                 join(es_main.table, e_root)
                 app.waitBox(false)
             })
+
+            // change info
+            es_search.info.innerText = `共检索到${search_list.length}首`
         }
         // , (res_data) => {
         //     app.errorBox(serverText(res_data.message))
@@ -168,6 +174,13 @@ app.listenInit(() => {
 
     es_preview.submit.addEventListener('click', () => {
         SelectSong.order()
+    })
+
+    es_preview.download.addEventListener('click', () => {
+        e_audio.pause()
+        // window.open(e_audio.src, '_blank')
+        const download_name = SelectSong.title + '-' + SelectSong.singer
+        app.downloadFile(SelectSong.src, download_name)
     })
 
 

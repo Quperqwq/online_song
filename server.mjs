@@ -59,7 +59,7 @@ httpApp.use(express.urlencoded({ limit: config.req_max_size, extended: true })) 
 httpApp.use(cookieParser()) // 配置Cookie解析中间件
 
 
-// TODO 在请求前进行的操作
+// 在请求前进行的操作
 httpApp.use((req, res, next) => {
     // (i)这里是身份验证的逻辑, 打印访问日志并验证身份
 
@@ -136,9 +136,9 @@ httpApp.use((req, res, next) => {
     // 获取用户代理内容
     const user_agent = req.headers['user-agent']
 
-    let log_content = `\n\n${app.date()} | ${user_name}\nMETHOD: ${req.method}\nIP: ${req.ip}\nUSER_AGENT: ${user_agent}`
+    let log_content = `\n\n${app.date()} | ${user_name}\nPATH: ${req.path}\nMETHOD: ${req.method}\nIP: ${req.ip}\nUSER_AGENT: ${user_agent}`
     
-    app.appendFile('./log/user_req.log', log_content)
+    app.appendFile(app.req_log_path, log_content)
 
     next()
 })
@@ -494,6 +494,12 @@ httpApp.post('/api', (req, res) => {
                     if (checkErr(user.changeRole(uid, target, value))) return
 
                     break
+
+                case 'delate_user': // 删除指定用户
+                    if (!isValid(uid)) return
+                    user.remove(uid)
+                    // app.log('remove', uid)
+                    break
                 case 'example': // 获取请求内容示范
                     res_data.data = _example_req_data
 
@@ -567,15 +573,6 @@ if (!app.test_mode) { // 是否是测试模式
     })
 } else {
     app.info('test_mode_bypass_server')
-    // player.push({
-    //     'src': 'https://music.163.com/song/media/outer/url?id=1311345944',
-    //     'cover': 'https://p3.music.126.net/6y-UleORITEDbvrOLV0Q8A==/5639395138885805.jpg',
-    //     'title': 'ずんだもんの朝食　〜目覚ましずんラップ〜',
-    //     'time': 126.119184, 'singer': 'ひらうみ'
-    // }, 'Quper', (valid) => {
-    //     app.log(valid)
-    // })
-
 
     // app.downloadFile({'url': 'https://music.163.com/song/media/outer/url?id=1311345944', 'ext_name': 'mp3', 'download_path': './'}, (hash) => {
     //     app.log(hash)
@@ -584,16 +581,17 @@ if (!app.test_mode) { // 是否是测试模式
 
     // config.local_music_mode = true
     // const user = new User({'id': '10002', 'password': '1919810'})
-    const user = new User({'user_name': 'Quper', 'password': '114514'})
+    const user = new User({'user_name': 'superqan', 'password': 'Quper233'})
 
     // app.log('add:', user.add())
     app.log('login:', user.login())
 
+    app.log(user.remove())
 
-    app.log('addLogin:', user.addLogin())
-    setTimeout(() => {
-        app.log('addLogin:', user.addLogin())
-    }, 1485)
+    // app.log('addLogin:', user.addLogin())
+    // setTimeout(() => {
+    //     app.log('addLogin:', user.addLogin())
+    // }, 1485)
     // app.log('changeData:', user.changeData('password', '1919810'))
 
     // app.log('order:', user.order({

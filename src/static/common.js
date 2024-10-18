@@ -46,7 +46,7 @@ class App {
                 504: '网关超时 未能及时响应',
             },
             error: {
-
+                'need_login': '需要登入',
             },
             module: {
                 'menu': '菜单',
@@ -159,7 +159,7 @@ class App {
             appendErr(this.initHeader())
             
             const err_list = this.init_err_list
-            if (err_list.length !== 0) return console.error('error message: ', err_list) // 若有错误信息不执行初始化内容
+            if (err_list.length !== 0) return console.error('init common script fail, error message: ', err_list) // 若有错误信息不执行初始化内容
 
             this.user.element.avatar = this.elems_header.logo
             this.user.element.name = this.elems_header.title
@@ -288,6 +288,20 @@ class App {
         }, (res_data) => {
             callback(res_data)
         })
+    }
+
+    /**
+     * 使浏览器下载指定URL的远程文件
+     * @param {string} url 
+     * @param {string} file_name 
+     */
+    downloadFile(url, file_name) {
+        const e_download = document.createElement('a')
+        e_download.href = url
+        e_download.download = file_name
+        e_download.target = '_blank'
+
+        e_download.click()
     }
 
 
@@ -496,6 +510,22 @@ class App {
         // elems.forEach((element) => {
         //     root_element.appendChild(element)
         // })
+    }
+
+    /**(!)尚未测试
+     * (DOM)获取对象内所有ID对应在DOM内的元素
+     * @param {Object.<string, Object | string>} obj 需要获取元素的对象
+     */
+    getElements(obj) {
+        const new_obj = {}
+        this.forEachObject(obj, (key, value) => {
+            if (!(typeof value === 'string')) {
+                new_obj[key] = this.getElements(value)
+            } else {
+                new_obj[key] = getEBI(value)
+            }
+        })
+        return new_obj
     }
 
     /**
@@ -1060,6 +1090,7 @@ const msgBoxText = key => text('msg_box', key)
 const itemText = key => text('item', key)
 const serverText = key => text('server', key)
 const pageNameText = key => text('page_name', key)
+const errorText = key => text('error', key)
 const log = console.log
 
 const createElement = app.createElement

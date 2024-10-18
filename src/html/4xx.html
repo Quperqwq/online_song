@@ -14,39 +14,46 @@
     <title>Error</title>
 </head>
 <body>
-    
+    <nav id="page-nav"></nav>
+
     <h2 id="title" class="space"> ... </h2>
     <hr>
     <p id="content" class="space"></p>
     <p class="space"><span id="time">--</span>秒后自动<a id="href" href="">跳转</a></p>
     
+    <section id="msg-box"></section>
+
     <script>
-        /**网页响应的状态码 @type {string} */
-        const status = app.getMetaData('status')
-        /**错误类型 @type {string} */
-        const type = app.getMetaData('type')
-        /**跳转到哪个URL @type {string} */
-        const to_url = app.getMetaData('to')
-        /**倒计时 @type {number} */
-        let time = valid(+app.getMetaData('time'), 4)
-
-        // 更新内容
-        const get = id_name => document.getElementById(id_name)
-        const e_title = get('title')
-        const e_content = get('content')
-        const e_time = get('time')
-        const e_href = get('href')
-
-        e_title.innerText = valid(app.getText('status', status), '发生错误')
-        e_content.innerText = app.getText('error', type)
-        e_href.href = valid(to_url, '/')
         
-        // 倒计时
-        app.setCountdown(5, (time) => {
-            e_time.innerText = time
-            if (!time) {
-                app.switchURL(to_url)
-            }
+        app.listenInit(() => {
+            /**网页响应的状态码 @type {string} */
+            const status = app.getMetaData('status')
+            /**错误类型 @type {string} */
+            const type = app.getMetaData('type')
+            /**跳转到哪个URL @type {string} */
+            const to_url = app.getMetaData('to')
+            /**倒计时 @type {number} */
+            let time = valid(+app.getMetaData('time'), 4)
+
+            // 更新内容
+            const get = id_name => document.getElementById(id_name)
+            const e_title = get('title')
+            const e_content = get('content')
+            const e_time = get('time')
+            const e_href = get('href')
+
+            e_title.innerText = valid(app.getText('status', status), '发生错误')
+            e_content.innerText = errorText(type)
+            e_href.href = valid(to_url, '/')
+            
+            // 倒计时
+            app.setCountdown(5, (time) => {
+                e_time.innerText = time
+                if (!time) {
+                    app.switchURL(to_url)
+                }
+            })
+            
         })
     </script>
 </body>

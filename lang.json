@@ -11,6 +11,8 @@
         "change_lang": "语言更改为'$cont_0$'",
         "change_lang_invalid": "指定的语言'$cont_0$'无效",
 
+        "invalid_path": "无效的目录'$cont_0$'",
+
         "user_login": "已使用$cont_0$方法认证一个用户实例",
         "user_register": "已成功注册一个用户'$cont_0$'",
 
@@ -24,6 +26,8 @@
         "try_write_file_error": "尝试写入文件失败,提供的信息如下\n$cont_0$",
         "try_download_file_error": "尝试下载文件'$cont_0$'失败: \n$cont_1$",
         "try_request_url_error": "尝试请求URL'$cont_0$'失败: \n$cont_1$",
+
+        "execution_error": "程序运行时发生了错误, 信息如下:\n$cont_0$",
 
         "invalid_request_param": "无效的请求参数: $cont_0$",
         "push_song": "已添加新的歌曲到播放列表: $cont_0$\nid(新歌的索引): $cont_1$\n点歌人: $cont_2$",
@@ -53,6 +57,8 @@
         "change_lang": "language changed to '$cont_0$'",
         "change_lang_invalid": "the specified language '$cont_0$' is invalid",
 
+        "invalid_path": "invalid path '$cont_0$'",
+
         "user_login": "authenticated a user instance using the $cont_0$ method",
         "user_register": "successfully registered a user '$cont_0$'",
 
@@ -67,6 +73,8 @@
         "try_download_file_error": "try download file '$cont_0$' failed: \n$cont_1$",
         "try_request_url_error": "try request url '$cont_0$'failed: \n$cont_1$",
         
+        "execution_error": "an error occurred during execution:\n$cont_0$",
+
         "invalid_request_param": "invalid request parameters: $cont_0$",
         "push_song": "a new song has been added to the playlist: $cont_0$\nid(index): $cont_1$\nsong requester: $cont_2$",
         "send_file_error": "error sending file to client\n$cont_0$",

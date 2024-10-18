@@ -11,9 +11,9 @@
 <body>
     <nav id="page-nav"></nav>
 
-    <main id="top">
+    <main>
         <section id="control" class="control" data-style-preview="show">
-            <section class="search">
+            <section class="search top">
                 <input id="search-input" placeholder="输入关键词以搜索..." type="text" title="search song">
                 <button id="search-submit" class="icon-search no-margin" type="button" title="start search"></button>
             </section>
@@ -23,7 +23,8 @@
                 </h3>
                 <audio id="player" src="" controls></audio>
                 <div class="line">
-                    <button id="order-submit" type="button" class="button">就这首!</button>
+                    <button id="start-download" type="button" class="button icon-download min-icon">下载</button>
+                    <button id="order-submit" type="button" class="button icon-order min-icon">点歌</button>
                 </div>
             </section>
         </section>
@@ -46,6 +47,7 @@
                 </tr>
             </tbody>
         </table>
+        <section id="search-info" class="search-info"></section>
     </section>
     </main>
     

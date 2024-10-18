@@ -119,7 +119,13 @@ app.listenInit(() => {
                         // del user
                         app.confirmBox(msgBoxText('confirm_del_user') + `\n${username}`, (is_confirm) => {
                             if (!is_confirm) return
-
+                            app.waitBox(true)
+                            app.useAPI({type: 'admin', method: 'delate_user', uid: uid}, (req_data) => {
+                                app.waitBox(false)
+                                initTable()
+                            }, (req_data) => {
+                                app.errorBox(errorText(req_data.message))
+                            })
                         })
                     }, '删除用户')
                 ]

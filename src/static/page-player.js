@@ -302,10 +302,12 @@ app.listenInit(() => {
 
 
     // 调试模式下添加原生播放器
-    if (app.debug_mode) {
-        es_main.player.appendChild(player)
-        player.controls = true
-    }
+    // if (app.debug_mode) {
+    //     es_main.player.appendChild(player)
+    //     player.controls = true
+    // }
+    es_main.player.appendChild(player)
+    player.controls = true
     
 
     // init

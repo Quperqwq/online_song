@@ -86,6 +86,7 @@ table th:last-child {
     position: sticky;
     top: 0;
     box-shadow: 0 0 .4em #999;
+    z-index: 3;
 }
 
 
@@ -296,7 +297,10 @@ nav#page-nav .brand .avatar, .avatar {
 
 [class*="icon-"]::before {
     font-family: 'icomoon';
-    padding-top: 0.3em;
+    padding-top: 0em;
+}
+[class*="icon-"].min-icon::before {
+    font-size: .8em;
 }
 .icon-menu::before { content: '\e9bd';}
 .icon-home::before {content: '\e900';}
@@ -318,6 +322,7 @@ nav#page-nav .brand .avatar, .avatar {
 .icon-admin::before, .icon-users::before {content: '\e972';}
 .icon-search::before {content: '\e986';}
 .icon-top::before {content: '\ea41';}
+.icon-download::before {content: '\e9c2';}
 
 
 [class*="icon-"].no-margin::before {

@@ -67,7 +67,9 @@
 
 
 .table-area {
+    /* display: block; */
     padding-bottom: 3em;
+    /* margin: 0 auto; */
 }
 
 
@@ -99,4 +101,13 @@
 
 .list .sticky-top {
     top: var(--head-height);
+}
+
+.search-info {
+    text-align: right;
+    /* padding-right: 1em; */
+    margin: 0 1em;
+    margin-top: 0.4em;
+    color: gray;
+    border-top: 2px solid #dedede;
 }

@@ -27,12 +27,37 @@ main {
     padding: 0 .2em;
 }
 
-.list section {
+.list section,
+.list .qrcode {
     border-radius: .2em;
     box-shadow: 0 0 8px #ccc;
-    height: 80vh;
-    overflow-y: scroll;
     margin: 0 1em;
+}
+
+.list section {
+    overflow-y: scroll;
+    height: 43.5vh;
+}
+
+.list .qrcode {
+    margin: 0 3em;
+    margin-top: 1em;
+}
+
+
+.list .qrcode h2 {
+    text-align: center;
+    padding: 0;
+    margin: 0;
+    padding-top: 1em;
+    font-size: 1.2em;
+}
+
+.list .qrcode img {
+    display: block;
+    width: 9em;
+    height: 9em;
+    margin: 0 auto;
 }
 
 
@@ -74,6 +99,7 @@ main {
 
 #play-list li article {
     text-wrap: nowrap;
+    white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
 }
@@ -132,7 +158,7 @@ main {
 
 .player .background {
     position: relative;
-    height: 13em;
+    height: 14em;
     width: 100%;
     background: var(--image-url) no-repeat center;
     background-size: cover;
