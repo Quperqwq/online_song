@@ -465,6 +465,7 @@ class App {
      * (DOM)(Element.appendChild)组合元素
      * @param {Element} root_element 根(父)元素
      * @param {any} child_elements 子元素
+     * 
      */
     joinElement(root_element, child_elements) {
         if (child_elements instanceof Element) {
@@ -515,9 +516,10 @@ class App {
     /**(!)尚未测试
      * (DOM)获取对象内所有ID对应在DOM内的元素
      * @param {Object.<string, Object | string>} obj 需要获取元素的对象
+     * @returns {Object.<string, Object | Element>}
      */
     getElements(obj) {
-        const new_obj = {}
+        let new_obj = {}
         this.forEachObject(obj, (key, value) => {
             if (!(typeof value === 'string')) {
                 new_obj[key] = this.getElements(value)
@@ -953,7 +955,8 @@ class App {
         return ''
     }
 
-    // back top
+
+    // (可选项)back top
     /**
      * 初始化一个页面返回顶部的按钮(链接); 当滚动到下面时该元素会以置顶的形式出现在页面, 点击后会跳转到id为top的标签处
      * @param {string} id_name 按钮(链接)的ID名
@@ -970,6 +973,56 @@ class App {
                 e_main.setAttribute('data-style', 'show')
             } else {
                 e_main.setAttribute('data-style', 'hidden')
+            }
+        })
+    }
+
+
+    // (可选项)audio control
+    /**
+     * 初始化一个音频控制显示的条, 并给音频添加一个键盘的快捷方式
+     * @param {HTMLAudioElement} audio_elem audio元素
+     */
+    initAudioControl(audio_elem, id_name = 'audio-bar') {
+        if (!(audio_elem instanceof HTMLAudioElement)) return 'invalid_param'
+        if (!(typeof id_name === 'string')) return 'missing_param'
+
+        // DOM...
+        const e_main = getEBI(id_name)
+        const e_content = createElement('h2', {class: 'content no-margin icon-volume-medium min-icon'})
+        join(e_main, e_content)
+        
+        let an_timeout
+        // listen key event
+        document.body.addEventListener('keydown', (event) => {
+            const key_code = event.key
+            const volume = audio_elem.volume
+            audio_elem.volume = ((volume * 10) | 0) / 10
+            if (key_code.slice(0, 5) === 'Arrow') {
+                switch (key_code) {
+                    case 'ArrowUp':
+                        event.preventDefault()
+                        if (volume < 1) {
+                            audio_elem.volume += .1
+                        }
+                        
+                        break
+                    case 'ArrowDown':
+                        event.preventDefault()
+                        if (volume > .1) {
+                            audio_elem.volume -= .1
+                        }
+
+                        break
+                    default:
+                        return
+                }
+                e_content.innerText = (audio_elem.volume * 100) | 0
+                clearTimeout(an_timeout)
+                e_main.classList.add('show')
+                an_timeout = setTimeout(() => {
+                    e_main.classList.remove('show')
+                }, 1000)
             }
         })
     }

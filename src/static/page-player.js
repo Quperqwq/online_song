@@ -2,18 +2,31 @@
  * @typedef {import('../../types').DocPlayerDOMList} PlayerList 当前播放列表元素
  */
 
-const es_main = {
-    play_lits: getEBI('play-list'),
-    lyric_lits: getEBI('lyric-list'),
-    player: getEBI('audio'),
+const es_main = app.getElements({
+    play_lits: 'play-list',
+    lyric_lits: 'lyric-list',
+    player: 'audio',
     playing: {
-        root: getEBI('player-area'),
-        progress: getEBI('song-progress'),
-        title: getEBI('song-title'),
-        order: getEBI('song-order'),
-        singer: getEBI('song-singer'),
+        root: 'player-area',
+        progress: 'song-progress',
+        title: 'song-title',
+        order: 'song-order',
+        singer: 'song-singer'
+    
     }
-}
+})
+// const es_main = {
+//     play_lits: getEBI('play-list'),
+//     lyric_lits: getEBI('lyric-list'),
+//     player: getEBI('audio'),
+//     playing: {
+//         root: getEBI('player-area'),
+//         progress: getEBI('song-progress'),
+//         title: getEBI('song-title'),
+//         order: getEBI('song-order'),
+//         singer: getEBI('song-singer'),
+//     }
+// }
 const player = new Audio()
 log(es_main)
 

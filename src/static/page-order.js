@@ -3,22 +3,57 @@
  * @typedef {import('../../types').SearchSongData} SearchSongData
  */
 
-const es_main = {
+// const es_main = {
+//     search: {
+//         input: getEBI('search-input'),
+//         submit: getEBI('search-submit'),
+//         info: getEBI('search-info')
+//     },
+//     preview: {
+//         root: getEBI('preview'),
+//         title: getEBI('preview-title'),
+//         audio: getEBI('player'),
+//         download: getEBI('start-download'),
+//         submit: getEBI('order-submit'),
+//     },
+//     control: getEBI('control'),
+//     table: getEBI('search-table'),
+// }
+
+/**
+ * @type {{
+ *  search: {
+ *      input: Element,
+ *      submit: Element,
+ *      info: Element
+ *  },
+ *  preview: {
+ *      root: Element,
+ *      title: Element,
+ *      audio: Element,
+ *      download: Element,
+ *      submit: Element
+ *  },
+ *  control: Element,
+ *  table: Element
+ * }}
+ */
+const es_main = app.getElements({
     search: {
-        input: getEBI('search-input'),
-        submit: getEBI('search-submit'),
-        info: getEBI('search-info')
+        input: 'search-input',
+        submit: 'search-submit',
+        info: 'search-info'
     },
     preview: {
-        root: getEBI('preview'),
-        title: getEBI('preview-title'),
-        audio: getEBI('player'),
-        download: getEBI('start-download'),
-        submit: getEBI('order-submit'),
+        root: 'preview',
+        title: 'preview-title',
+        audio: 'player',
+        download: 'start-download',
+        submit: 'order-submit',
     },
-    control: getEBI('control'),
-    table: getEBI('search-table'),
-}
+    control: 'control',
+    table: 'search-table',
+})
 
 const es_preview = es_main.preview
 const e_audio = es_main.preview.audio
@@ -186,4 +221,5 @@ app.listenInit(() => {
 
 
     app.initBackTop()
+    log(app.initAudioControl(e_audio))
 })

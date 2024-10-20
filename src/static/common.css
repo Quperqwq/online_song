@@ -242,6 +242,43 @@ button.icon-hidden {
     -webkit-backdrop-filter: blur(2px);
 }
 
+/* audio bar */
+
+#audio-bar {
+    position: fixed;
+    text-align: center;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    width: 100%;
+    z-index: 11;
+    pointer-events: none;
+    transition: all .2s ease;
+    transform: translateY(-3em);
+    opacity: 0;
+}
+
+#audio-bar.show {
+    transform: translateY(2em);
+    opacity: 1;
+}
+
+#audio-bar .content {
+    display: inline-block;
+    width: 4em;
+    padding: .1em .6em;
+    background-color: #0000004e;
+    color: #fff;
+    font-size: 1.2em;
+    border-radius: .2em;
+    pointer-events: all;
+}
+
+#audio-bar .content::after {
+    content: '%';
+}
+
 
 /* 导航栏 */
 /* nav#page-nav {
@@ -323,6 +360,11 @@ nav#page-nav .brand .avatar, .avatar {
 .icon-search::before {content: '\e986';}
 .icon-top::before {content: '\ea41';}
 .icon-download::before {content: '\e9c2';}
+/* volume */
+.icon-volume-mute::before {content: '\ea2a';}
+.icon-volume-low::before {content: '\ea28';}
+.icon-volume-medium::before {content: '\ea27';}
+.icon-volume-high::before {content: '\ea26';}
 
 
 [class*="icon-"].no-margin::before {
